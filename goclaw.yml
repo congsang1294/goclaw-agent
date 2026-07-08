@@ -28,15 +28,21 @@ agent:
     - agentId: ga-trong-tre
       match:
         channel: telegram
-    - agentId: ga-trong-tre
-      match:
-        channel: telegram
         peer:
           kind: direct
           id: "6880126421"
-    - agentId: ga-trong-tre
+    - agentId: lam-video
       match:
         channel: telegram
         peer:
           kind: group
-          id: "-5238486762"
+    - agentId: tao-anh
+      match:
+        channel: telegram
+        peer:
+          kind: group
+    - agentId: viet-bai-fb
+      match:
+        channel: telegram
+        peer:
+          kind: group
