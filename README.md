@@ -1,27 +1,30 @@
-# GoClaw Agent — Google Ads Toolkit
+# GoClaw Agent — Gà Trống Tre (ga-trong-tre)
 
-Agent configuration cho GoClaw platform. Agent **Gà Trống Tre** phục vụ business Google Ads Toolkit của anh Công Sáng.
+Agent configuration và skills cho GoClaw platform. Phục vụ business Google Ads Toolkit của anh Công Sáng.
 
-## Cấu trúc
+## Agent
 
-```
-agent/           — cấu hình nhân dạng, quyền hạn, heartbeat, soul
-skills/          — kỹ năng và script triển khai
-goclaw.yml       — cấu hình GoClaw platform
-```
+- **Tên:** Gà Trống Tre
+- **ID:** ga-trong-tre
+- **Workstation:** ga-trong-tre-docker
+- **Telegram user:** `6880126421` (Công Sáng)
 
-## Các kỹ năng
+## Skills
 
-- **tao-creative-fb-gpt**: Tạo content Facebook (caption + ảnh) qua GPT, đăng lên Page
-- **tao-creative-fb**: Dual-cron auto post Facebook (gen + đăng)
-- **tao-video-ai**: Tạo video AI (Higgsfield/Kling) và đăng đa nền tảng
-- **viet-bai-facebook**: Viết bài Facebook organic
-- **sang-tao-creative-fb**: Sáng tạo creative Facebook ads
+| Skill | Mô tả |
+|---|---|
+| [sang-tao-creative-fb](skills/sang-tao-creative-fb/) | Tạo content Facebook (caption + ảnh + đăng Page) |
+| [agent-scout](skills/agent-scout/) | Research web, phân tích đối thủ, SWOT |
+| [tao-video-ai](skills/tao-video-ai/) | Tạo video AI + đăng Facebook Reels |
+| [viet-bai-facebook](skills/viet-bai-facebook/) | Viết bài Facebook quảng cáo/bán hàng |
+| [tra-loi-faq-khach-hang](skills/tra-loi-faq-khach-hang/) | FAQ và tư vấn nhanh Google Ads |
 
-## Workstation
+## Knowledge Base
 
-Agent sử dụng Docker workstation `ga-trong-tre-docker` để exec Python scripts.
+- `knowledge/brand-voice.md` — Brand voice
+- `knowledge/knowledge-base.md` — Kiến thức Google Ads
+- `knowledge/my-business.md` — Thông tin business
 
-## Quyền Telegram
+## Cập nhật
 
-Chỉ Telegram user ID `6880126421` (anh Sáng) mới có quyền ra lệnh sửa đổi hệ thống.
+Xem [agent/](agent/) cho context files hiện tại.

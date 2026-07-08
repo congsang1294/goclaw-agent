@@ -1,51 +1,42 @@
-# GoClaw Agent Configuration
-# Agent: Gà Trống Tre (ga-trong-tre)
-# Business: Google Ads Toolkit
+# GoClaw Agent Configuration — Gà Trống Tre
+# Business: Google Ads Toolkit (tool.congsang.info.vn)
 
 agent:
   name: "Gà Trống Tre"
   id: ga-trong-tre
   description: "Trợ lý Google Ads thực chiến & vận hành business"
 
-  # Người dùng được ủy quyền (Telegram user ID)
   owners:
     - user_id: "6880126421"
       name: "Công Sáng Nguyễn"
       role: owner
 
-  # Workstation Docker được phép sử dụng
   workstations:
     - name: ga-trong-tre-docker
       type: docker
-      description: "Docker workspace chạy Python scripts cho Facebook, video, caption"
+      description: "Docker workspace chạy Python scripts"
       paths:
-        - /app/workspace/quan-ly-mang-xa-hoi
+        - /app/workspace/ga-trong-tre
       skills:
-        - tao-creative-fb-gpt
-        - tao-creative-fb
+        - sang-tao-creative-fb
+        - agent-scout
         - tao-video-ai
         - viet-bai-facebook
-        - sang-tao-creative-fb
+        - tra-loi-faq-khach-hang
 
-  # MCP Server kết nối
-  mcp_servers:
-    - name: google-ads-toolkit-signals
-      url: http://localhost:3001/mcp
-      functions:
-        - get_success_order_signal
-        - get_new_lead_signal
-        - get_daily_business_summary
-        - list_pending_orders
-        - get_recent_leads
-        - grant_pro_access
-        - update_pro_offer
-        - create_task
-        - assign_task
-        - list_tasks
-        - update_task_status
-
-  # Telegram bot
-  telegram:
-    bot_token_env: TELEGRAM_BOT_TOKEN
-    chat_id_env: TELEGRAM_CHAT_ID
-    user_id_env: TELEGRAM_USER_ID
+  bindings:
+    - agentId: ga-trong-tre
+      match:
+        channel: telegram
+    - agentId: ga-trong-tre
+      match:
+        channel: telegram
+        peer:
+          kind: direct
+          id: "6880126421"
+    - agentId: ga-trong-tre
+      match:
+        channel: telegram
+        peer:
+          kind: group
+          id: "-5238486762"

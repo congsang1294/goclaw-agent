@@ -1,150 +1,96 @@
 #!/usr/bin/env python3
 """
-check_env.py — Kiểm tra môi trường cho skill tao-video-ai.
-
-Kiểm tra:
-  - Python version
-  - API keys (OPENAI_API_KEY, ANTHROPIC_API_KEY, HIGGSFIELD_API_KEY)
-  - Required packages (openai, anthropic, dotenv)
-  - Product photos directory
-  - Output directory
+Kiểm tra môi trường cho skill tao-video-ai.
+Không in secret ra console.
 
 Usage:
-    python scripts/check_env.py
+    python3 scripts/check_env.py
 """
 
-import importlib
+from __future__ import annotations
+
 import json
 import os
 import sys
-import subprocess
 from pathlib import Path
-
-SKILL_DIR = Path(__file__).resolve().parent.parent
 
 try:
     from dotenv import load_dotenv
-    load_dotenv(SKILL_DIR / "scripts" / ".env")
 except ImportError:
-    pass
+    load_dotenv = None
 
-# ---------- checks ----------
 
-def check_python():
-    print(f"  Python: {sys.version.split()[0]}")
-    return True
+SCRIPT_DIR = Path(__file__).resolve().parent
 
-def check_api_key(name, label):
-    val = os.environ.get(name, "")
-    if val:
-        short = val[:8] + "..." if len(val) > 12 else val
-        print(f"  {label}: ✅ {short}")
-        return True
-    else:
-        print(f"  {label}: ⬜ (not set)")
-        return False
 
-def check_package(name, pip_name=None):
-    try:
-        mod = importlib.import_module(name)
-        ver = getattr(mod, "__version__", "?")
-        print(f"  {name}: ✅ v{ver}")
-        return True
-    except ImportError:
-        print(f"  {name}: ❌ not installed — pip install {pip_name or name}")
-        return False
+def mask(value: str) -> str:
+    if not value:
+        return "(empty)"
+    if len(value) < 12:
+        return value[:4] + "***"
+    return value[:6] + "..." + value[-4:]
 
-def check_dir(path, label):
-    p = Path(path)
-    if p.exists():
-        files = [f for f in p.iterdir() if f.is_file()]
-        print(f"  {label}: ✅ ({len(files)} files)")
-        return True
-    else:
-        print(f"  {label}: ❌ not found at {p}")
-        return False
 
-def check_env_file():
-    env_path = SKILL_DIR / "scripts" / ".env"
-    if env_path.exists():
-        lines = [l for l in env_path.read_text().splitlines() if l.strip() and not l.startswith("#")]
-        print(f"  .env: ✅ ({len(lines)} config lines)")
-        return True
-    else:
-        print(f"  .env: ❌ not found at {env_path}")
-        return False
+def check_env() -> list[dict]:
+    if load_dotenv:
+        load_dotenv(SCRIPT_DIR / ".env")
+    results = []
 
-# ---------- main ----------
-
-def main():
-    print("=" * 50)
-    print("  tao-video-ai — Environment Check")
-    print("=" * 50)
-
-    print("\n--- System ---")
-    check_python()
-
-    print("\n--- API Keys ---")
-    has_llm = check_api_key("OPENAI_API_KEY", "OpenAI")
-    has_claude = check_api_key("ANTHROPIC_API_KEY", "Claude")
-    check_api_key("HIGGSFIELD_API_KEY", "Higgsfield")
-
-    print("\n--- Packages ---")
-    check_package("openai")
-    check_package("anthropic")
-    check_package("dotenv", "python-dotenv")
-
-    print("\n--- Directories ---")
-    check_dir(SKILL_DIR / "assets", "assets/")
-    check_dir(SKILL_DIR / "references", "references/")
-    check_dir(SKILL_DIR / "scripts", "scripts/")
-    check_dir(SKILL_DIR / "output", "output/")
-
-    # product-photos — tìm ở nhiều nơi
-    print("\n--- Product Photos ---")
-    candidates = [
-        SKILL_DIR / "product-photos",
-        SKILL_DIR.parent / "product-photos",
-        SKILL_DIR.parent.parent / "product-photos",
-        Path.cwd() / "product-photos",
+    checks = [
+        ("OPENAI_API_KEY", "Prompt generation (OpenAI)", False),
+        ("ANTHROPIC_API_KEY", "Prompt generation (Claude)", True),
+        ("KLING_API_KEY", "Kling AI API key", True),
+        ("KLING_SECRET_KEY", "Kling AI API secret", True),
     ]
-    found = False
-    for c in candidates:
-        if c.exists() and any(c.iterdir()):
-            files = list(c.rglob("*"))
-            images = [f for f in files if f.suffix.lower() in (".jpg", ".jpeg", ".png", ".webp")]
-            print(f"  product-photos: ✅ ({len(images)} ảnh tại {c})")
-            found = True
-            break
-    if not found:
-        print(f"  product-photos: ❌ not found (searched {len(candidates)} locations)")
 
-    print("\n--- Test Scripts ---")
-    scripts = ["gen-prompt.py", "list-images.py", "upload-higgsfield.py"]
     all_ok = True
-    for s in scripts:
-        sp = SKILL_DIR / "scripts" / s
-        if sp.exists():
-            # syntax check
-            result = subprocess.run(
-                [sys.executable, "-c", f"import ast; ast.parse(open('{sp}').read())"],
-                capture_output=True, text=True,
-            )
-            if result.returncode == 0:
-                print(f"  {s}: ✅ syntax OK")
+    for key, purpose, optional in checks:
+        value = os.environ.get(key, "")
+        if not value:
+            if optional:
+                status = "⚠️  OPTIONAL"
             else:
-                print(f"  {s}: ⚠️ syntax error — {result.stderr.strip()[:80]}")
+                status = "❌  MISSING"
                 all_ok = False
         else:
-            print(f"  {s}: ❌ not found")
-            all_ok = False
+            status = f"✅  OK ({mask(value)})"
+        results.append({"key": key, "purpose": purpose, "status": status, "value": value, "optional": optional})
+        print(f"  {status}  {key}  ({purpose})")
 
-    print("\n" + "=" * 50)
-    if has_llm or has_claude:
-        print("  Status: ✅ Sẵn sàng chạy pipeline")
+    # Kiểm tra thư mục ảnh
+    image_dirs = [
+        Path.cwd() / "product-photos",
+        SCRIPT_DIR.parent.parent / "product-photos",
+    ]
+    found_dir = None
+    for d in image_dirs:
+        if d.exists():
+            found_dir = d
+            break
+
+    if found_dir:
+        images = list(found_dir.rglob("*"))
+        image_files = [f for f in images if f.suffix.lower() in (".jpg", ".jpeg", ".png", ".webp")]
+        print(f"  📁  product-photos: {found_dir} ({len(image_files)} ảnh)")
+        results.append({"key": "product-photos", "status": f"Found: {len(image_files)} images"})
     else:
-        print("  Status: ⚠️ Cần set API key (.env)")
-    print("=" * 50)
+        print(f"  ⚠️  product-photos: Không tìm thấy thư mục. Tạo product-photos/ với ảnh sản phẩm.")
+        results.append({"key": "product-photos", "status": "Not found"})
+
+    print()
+    if all_ok:
+        print("  ✅  Các biến bắt buộc đã đủ. Ready to generate video.")
+    else:
+        print("  ⚠️  Còn thiếu biến bắt buộc. Copy env.example thành .env và điền key.")
+
+    return results
+
+
+def main():
+    print(f"\n  🔍  tao-video-ai — Kiểm tra môi trường")
+    print(f"  {'─' * 40}")
+    check_env()
+    print(f"  {'─' * 40}\n")
 
 
 if __name__ == "__main__":

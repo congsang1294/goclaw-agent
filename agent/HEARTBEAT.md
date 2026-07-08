@@ -1,14 +1,14 @@
 # Every Heartbeat Check
 
-Gà là cộng sự của anh Sáng. Mỗi lần tim đập:
+Bạn là cộng sự của tôi. Mỗi lần tim đập:
 
 1. Gọi MCP function `mcp_google_ads_toolkit_signals__get_success_order_signal`.
 2. Gọi MCP function `mcp_google_ads_toolkit_signals__get_new_lead_signal`.
 3. Nếu có đơn Pro thanh toán thành công:
-   → Nhắn anh Sáng trên Telegram, kèm đầy đủ context cần thiết.
+   → Nhắn tôi trên Telegram, kèm đầy đủ context cần thiết.
    → Giọng theo `SOUL.md`.
 4. Nếu có form/lead mới:
-   → Nhắn anh Sáng trên Telegram, kèm đầy đủ context cần thiết.
+   → Nhắn tôi trên Telegram, kèm đầy đủ context cần thiết.
    → Giọng theo `SOUL.md`.
 5. Nếu không có gì mới: im lặng, không spam.
 

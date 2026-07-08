@@ -1,0 +1,64 @@
+# Negative Prompt Mặc Định — AI Video
+
+Danh sách các yếu tố cần loại trừ trong prompt cho AI video generation.
+Copy-paste vào trường negative prompt trên Kling / Runway / Higgsfield.
+
+## Standard Blocklist (dùng mọi lúc)
+
+```
+blurry, distorted, deformed, ugly, bad anatomy, bad proportions, extra limbs,
+missing fingers, text, watermark, logo, signature, username, timestamp,
+low quality, worst quality, normal quality, jpeg artifacts, compression artifacts,
+grainy, noisy, oversaturated, undersaturated, amateur, screenshot, ui, overlay,
+border, frame, chromatic aberration, lens flare, fisheye, wide angle,
+mutation, mutation hands, mutated fingers, cloned face, disfigured,
+gross proportions, long neck, morbid, multiple heads, mutilated, out of frame,
+poorly drawn, extra digits, fused fingers, twisted fingers, poorly rendered,
+poorly lit
+```
+
+## Brand-specific Blocklist
+
+Thêm khi gen prompt cho brand cụ thể:
+
+### Tránh sai logo
+```
+wrong logo, incorrect logo, distorted logo, logo misplacement, logo smeared,
+unbranded, generic brand, competitor logo, fake logo, misaligned print
+```
+
+### Tránh sai màu brand
+```
+wrong color, incorrect shade, oversaturated color, neon, fluorescent, mismatched color,
+color bleed, color shift, wrong hex color, inaccurate brand color, desaturated brand color
+```
+
+### Tránh sai chất liệu (cho fashion)
+```
+plastic, rubber, cheap fabric, polyester shine, wrinkle, frayed, torn, stain,
+wrinkled fabric, pilling, loose thread, uneven texture, fabric defect
+```
+
+### Tránh human artifacts (cho model)
+```
+deformed hand, extra finger, missing finger, bad hand, mutated hand,
+mannequin, wax figure, doll, plastic skin, unnatural skin texture, airbrushed skin,
+asymmetrical face, mismatched eyes, dead eyes, glass eyes
+```
+
+---
+
+## Cách dùng trong gen-prompt.py
+
+Script `gen-prompt.py` tự động append negative prompt vào mỗi scene.
+Có thể override bằng file riêng:
+
+```bash
+python gen-prompt.py "áo khoác" --negative assets/negative-prompt.txt
+```
+
+Hoặc dùng custom:
+
+```bash
+python gen-prompt.py "áo khoác" --negative path/to/custom-negative.txt
+```
