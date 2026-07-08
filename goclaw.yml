@@ -24,6 +24,31 @@ agent:
         - viet-bai-facebook
         - tra-loi-faq-khach-hang
 
+    - name: viet-bai-fb-docker
+      type: docker
+      description: "Workspace cho Cây Bút viết bài Facebook"
+      paths:
+        - /app/workspace/ga-trong-tre
+      skills:
+        - viet-bai-facebook
+
+    - name: tao-anh-docker
+      type: docker
+      description: "Workspace cho Designer tạo ảnh creative"
+      paths:
+        - /app/workspace/ga-trong-tre
+      skills:
+        - sang-tao-creative-fb
+        - viet-bai-facebook
+
+    - name: lam-video-docker
+      type: docker
+      description: "Workspace cho Làm Video dựng video TikTok/Reels/Shorts"
+      paths:
+        - /app/workspace/ga-trong-tre
+      skills:
+        - tao-video-ai
+
   bindings:
     - agentId: ga-trong-tre
       match:
