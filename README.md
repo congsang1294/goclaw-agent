@@ -2,12 +2,20 @@
 
 Agent configuration và skills cho GoClaw platform. Phục vụ business Google Ads Toolkit của anh Công Sáng.
 
-## Agent
+## Agent chính
 
-- **Tên:** Gà Trống Tre
-- **ID:** ga-trong-tre
-- **Workstation:** ga-trong-tre-docker
-- **Telegram user:** `6880126421` (Công Sáng)
+| Agent | ID | Workspace | Vai trò |
+|---|---|---|---|
+| 🐔 Gà Trống Tre | `ga-trong-tre` | `/app/workspace/ga-trong-tre` | Lead agent, exec scripts qua workstation |
+
+## Agent hỗ trợ (team)
+
+| Agent | Skill | Vai trò |
+|---|---|---|
+| 🎨 Tạo Ảnh (`tao-anh`) | `sang-tao-creative-fb` | Tạo ảnh + caption Facebook |
+| 🎬 Làm Video (`lam-video`) | `tao-video-ai` | Tạo video AI + đăng Facebook Reels |
+| ✍️ Cây Bút (`viet-bai-fb`) | `viet-bai-facebook` | Viết bài Facebook |
+| 🦊 Fox Spirit (`fox-spirit`) | `agent-scout`, `tra-loi-faq` | Research web, FAQ khách hàng |
 
 ## Skills
 
@@ -19,6 +27,12 @@ Agent configuration và skills cho GoClaw platform. Phục vụ business Google 
 | [viet-bai-facebook](skills/viet-bai-facebook/) | Viết bài Facebook quảng cáo/bán hàng |
 | [tra-loi-faq-khach-hang](skills/tra-loi-faq-khach-hang/) | FAQ và tư vấn nhanh Google Ads |
 
+## Workstation
+
+- Tên: `ga-trong-tre-docker`
+- Type: Docker
+- Path: `/app/workspace/ga-trong-tre`
+
 ## Knowledge Base
 
 - `knowledge/brand-voice.md` — Brand voice
@@ -27,4 +41,4 @@ Agent configuration và skills cho GoClaw platform. Phục vụ business Google 
 
 ## Cập nhật
 
-Xem [agent/](agent/) cho context files hiện tại.
+Push code lên GitHub → báo Gà deploy lên VPS.
