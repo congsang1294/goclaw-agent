@@ -1,0 +1,124 @@
+# ROUTING TABLE
+
+> **File:** `core/router/ROUTING_TABLE.yaml`
+> **Role:** Config-driven mapping: Intent → Worker → Skill
+> **Part of:** Dynamic Router
+> **Phase:** 1 — Core Framework
+
+---
+
+```yaml
+# ============================================================
+# ROUTING TABLE — AI Team Framework
+# ============================================================
+#
+# Cấu trúc mỗi route:
+#   - id: unique identifier
+#     intents: [list of intent names từ INTENT_ANALYZER]
+#     worker: worker agent ID (@mention trong group chat)
+#     skill: skill name để thực thi
+#     timeout: maximum execution time trước khi timeout
+#     plan_type: simple | multi_step | complex
+#
+# ============================================================
+
+routes:
+
+  # ─── CONTENT WRITING ──────────────────────────────────────
+
+  - id: write_post
+    intents: [write_post]
+    worker: viet-bai-fb
+    skill: viet-bai-facebook
+    timeout: 120s
+    plan_type: simple
+
+  - id: create_ideas
+    intents: [create_ideas]
+    worker: viet-bai-fb
+    skill: viet-bai-facebook
+    timeout: 120s
+    plan_type: simple
+
+  # ─── IMAGE CREATION ───────────────────────────────────────
+
+  - id: create_images
+    intents: [create_image]
+    worker: tao-anh
+    skill: sang-tao-creative-fb
+    timeout: 300s
+    plan_type: simple
+
+  # ─── VIDEO PRODUCTION ─────────────────────────────────────
+
+  - id: make_video
+    intents: [create_video]
+    worker: lam-video
+    skill: tao-video-ai
+    timeout: 600s
+    plan_type: simple
+
+  # ─── COMPLEX / ORCHESTRATION ──────────────────────────────
+
+  - id: team_sync
+    intents: [team_sync]
+    worker: manager
+    skill: orchestration
+    timeout: 900s
+    plan_type: complex
+
+  - id: create_ad
+    intents: [create_ad]
+    worker: manager
+    skill: orchestration
+    timeout: 600s
+    plan_type: multi_step
+
+  # ─── FAQ / ANSWER ─────────────────────────────────────────
+
+  - id: answer_faq
+    intents: [answer_faq]
+    worker: manager
+    skill: tra-loi-faq-khach-hang
+    timeout: 60s
+    plan_type: simple
+
+  # ─── SYSTEM ───────────────────────────────────────────────
+
+  - id: approve_content
+    intents: [approve]
+    worker: manager
+    skill: orchestration
+    timeout: 30s
+    plan_type: simple
+
+  - id: check_progress
+    intents: [check_status]
+    worker: manager
+    skill: orchestration
+    timeout: 30s
+    plan_type: simple
+
+  - id: cancel_task
+    intents: [cancel]
+    worker: manager
+    skill: orchestration
+    timeout: 15s
+    plan_type: simple
+
+  - id: unknown_intent
+    intents: [unknown]
+    worker: manager
+    skill: orchestration
+    timeout: 15s
+    plan_type: simple
+```
+
+---
+
+## Note
+
+- **Worker = `manager`** nghĩa là route này không gửi đến worker khác, mà Manager tự xử lý
+- **Timeout** là thời gian tối đa trước khi coi là failed
+- **Plan type** cho Manager biết có cần Planner không, hay chỉ dispatch đơn giản
+- **Thêm route mới:** chỉ cần thêm 1 entry trong file này + đảm bảo worker và skill tồn tại

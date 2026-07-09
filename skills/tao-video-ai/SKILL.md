@@ -99,3 +99,63 @@ facebook-post-video
 - Sau khi đăng thành công, phải trả link Reels Facebook cho anh Sáng ngay trong Telegram.
 - Nếu có file video anh Sáng upload trong `.uploads`, ưu tiên đăng chính file đó sau khi anh nhắn OK.
 - Luồng hợp lệ để nộp bài: anh Sáng nói chuyện với Gà trên Telegram → Gà nhận/tạo video → anh OK → Gà đăng Facebook → Gà trả link.
+
+---
+
+## Task Status Management — Worker Integration
+
+Khi skill này chạy trong context của một Task (Worker Làm Video), Worker tự quản lý trạng thái task như sau:
+
+### Status Transitions
+
+| Giai đoạn | Status | Khi nào |
+|-----------|--------|---------|
+| Nhận task, bắt đầu pipeline | `in_progress` | Ngay sau khi nhận task |
+| Đang gen prompt | `in_progress` | Chạy gen-prompt.py |
+| Đang render video | `in_progress` | Chạy gen-video.py (có thể 2-3 phút) |
+| Đang ghép voice + final | `in_progress` | Chạy gen-voice.py + build-final.py |
+| Preview sẵn sàng | `done` | Trả video preview cho Manager |
+| Lỗi provider hoặc timeout | `failed` | Retry hết lượt → fail |
+
+### Progress Reporting (quan trọng — video generation lâu)
+
+Worker nên báo progress định kỳ nếu pipeline chạy >30s:
+
+- "Đang gen prompt..."
+- "Đang render video với OpenAI-KenBurns... (ước tính 2 phút)"
+- "Đang ghép voice..."
+- "Video sắp xong..."
+
+### Error Handling (Task-aware)
+
+- **Provider fail (OpenAI/Kling):** Retry với provider còn lại. Nếu cả 2 fail → `failed`
+- **Timeout (>600s):** Task tự động `failed`. Báo Manager.
+- **ffmpeg error:** `failed` + error log. Không retry.
+
+### Output Delivery
+
+```json
+{
+  "status": "done",
+  "output": {
+    "video_url": "https://...final.mp4",
+    "video_preview": "https://...preview.mp4",
+    "duration_seconds": 18,
+    "provider": "openai-ken-burns"
+  }
+}
+```
+
+Khi lỗi:
+```json
+{
+  "status": "failed",
+  "error": "Cả OpenAI và Kling đều fail. OpenAI: timeout. Kling: API error 500."
+}
+```
+
+### Lưu ý đặc thù Video
+
+- **Không tự đăng Facebook** — chỉ trả preview. Chờ Manager bảo "OK" mới post.
+- **Pipeline dài** — Worker nên báo progress mỗi 30s để Manager biết task vẫn alive.
+- **Retry chiến lược** — Nếu OpenAI fail, thử Kling. Nếu Kling fail, thử OpenAI lại. Retry tối đa 2 lần/provider.

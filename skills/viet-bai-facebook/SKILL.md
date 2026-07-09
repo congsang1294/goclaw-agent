@@ -242,3 +242,46 @@ Nếu người dùng muốn bài đăng liền mạch, xuất thành một bài 
 - Nếu CTA quá gắt, đổi sang câu kiểu: "Anh em ghé vào thử xem có hợp không."
 - Nếu bài quá dài, rút bớt nhưng giữ ý chính và brand voice.
 - Nếu người dùng yêu cầu bài cho group Facebook, đừng dán link quá sớm; viết như đang tham gia hội thoại rồi mới đưa link khi hợp lý.
+
+---
+
+## Task Status Management — Worker Integration
+
+Khi skill này chạy trong context của một Task (Worker Cây Bút), Worker tự quản lý trạng thái task như sau:
+
+### Status Transitions
+
+| Giai đoạn | Status | Khi nào |
+|-----------|--------|---------|
+| Bắt đầu xử lý | `in_progress` | Ngay sau khi nhận task |
+| Đang hỏi thông tin | `in_progress` | Đang chờ Manager reply |
+| Hoàn thành | `done` | Đã trả output hoàn chỉnh |
+| Lỗi không xử lý được | `failed` | API fail, timeout, hoặc input không hợp lệ |
+
+### Progress Reporting
+
+Khi skill chạy lâu (>10s), Worker nên báo progress:
+- "Đang phân tích brief..."
+- "Đang viết bài..."
+- "Đang kiểm tra brand voice..."
+
+### Error Handling (Task-aware)
+
+- **API timeout:** Retry 1 lần. Nếu vẫn fail → báo `failed` + error message
+- **Thiếu input:** Hỏi Manager 1 câu. Chờ reply. Vẫn `in_progress`.
+- **Invalid input:** Báo `failed` + lý do. Không tự suy diễn.
+
+### Output Delivery
+
+Khi hoàn thành, Worker trả output kèm status:
+```
+[done] Caption đã xong:
+{caption}
+
+[output JSON cho Manager]
+```
+hoặc
+```
+[failed] Lỗi: {error_message}
+```
+

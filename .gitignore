@@ -24,3 +24,7 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Runtime data (not tracked)
+memory/sessions/
+memory/long-term/

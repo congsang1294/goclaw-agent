@@ -209,3 +209,54 @@ python3 scripts/check_env.py
 - Nếu publish ảnh fail, không được gọi Facebook.
 - Nếu Facebook fail, trả nguyên lỗi Graph API rõ ràng.
 - Không in token/key ra output.
+
+---
+
+## Task Status Management — Worker Integration
+
+Khi skill này chạy trong context của một Task (Worker Tạo Ảnh), Worker tự quản lý trạng thái task như sau:
+
+### Status Transitions
+
+| Giai đoạn | Status | Khi nào |
+|-----------|--------|---------|
+| Nhận task, bắt đầu gen ý tưởng | `in_progress` | Ngay sau khi nhận task |
+| Đang gen ảnh (OpenAI) | `in_progress` | Chạy gen_image.py |
+| Đang chờ duyệt | `in_progress` | Đã gửi preview, chờ Manager OK |
+| Hoàn thành | `done` | Đã trả ảnh + caption ghép cặp |
+| Lỗi OpenAI | `failed` | Retry 1 lần → vẫn fail |
+
+### Progress Reporting
+
+- "Đang gen ảnh... (có thể mất 15-20s)"
+- "Ảnh đã xong. Đang ghép caption..."
+- "Chờ anh Sáng duyệt ạ."
+
+### Error Handling (Task-aware)
+
+- **OpenAI API fail:** Retry 1 lần với backoff 5s. Nếu vẫn fail → `failed`
+- **Publish ảnh fail:** `failed` với error message. Không gọi Facebook.
+- **Thiếu concept:** Hỏi Manager concept cụ thể. Vẫn `in_progress`.
+
+### Output Delivery
+
+```json
+{
+  "status": "done",
+  "output": {
+    "image_url": "https://...png",
+    "image_local": "output/creative_001.png",
+    "caption_paired": "caption đi kèm...",
+    "mode": "organic"
+  }
+}
+```
+
+Khi lỗi:
+```json
+{
+  "status": "failed",
+  "error": "OpenAI API: rate limit exceeded after 1 retry"
+}
+```
+

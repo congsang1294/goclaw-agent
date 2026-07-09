@@ -1,0 +1,130 @@
+# WORKER REGISTRY
+#
+# Single source of truth for all Workers in the AI Team Framework.
+# Manager đọc file này để biết:
+#   - Có bao nhiêu Workers đang hoạt động
+#   - Worker nào có skill gì
+#   - Worker nào có Telegram binding không
+#   - Dispatch template cho từng worker
+#
+# Nguyên tắc:
+#   - THÊM Worker: thêm 1 entry trong file này + tạo agent/<id>/ + skills/<name>/
+#   - XÓA Worker: xóa entry khỏi file này (không sửa core/)
+#   - SỬA Worker: sửa entry trong file này (không sửa core/)
+#
+# Đây là cấu hình. KHÔNG hardcode worker trong core/*.md.
+# Khi cần thông tin worker → đọc file này.
+
+# ============================================================
+# WORKERS
+# ============================================================
+# Mỗi worker là một entry trong workers list.
+#
+# Fields:
+#   id:             Agent ID (khớp với @agentId trong group chat)
+#   name:           Tên hiển thị
+#   role:           Vai trò trong team
+#   status:         active | inactive | planned
+#   telegram:       Loại binding (group | direct | none)
+#   skills:         Danh sách skills worker này có thể thực thi
+#   dispatch_to:    Cách dispatch (@agentId | use_skill | manager_self)
+#   input_format:   Mô tả input worker cần
+#   output_format:  Mô tả output worker trả về
+#   timeout:        Timeout mặc định (giây)
+
+workers:
+
+  # ─── CÂY BÚT ──────────────────────────────────────────────
+  # Content Writer: viết bài Facebook
+
+  - id: viet-bai-fb
+    name: "Cây Bút"
+    role: "Facebook Content Writer"
+    status: active
+    telegram:
+      binding: group
+      mention: "@viet-bai-fb"
+    skills:
+      - viet-bai-facebook
+    dispatch_to: "@viet-bai-fb in group chat"
+    input_format: |
+      Topic + brief (product, audience, pain point, benefit, CTA)
+    output_format: |
+      3 ideas OR full caption (Hook + Body + CTA)
+    timeout: 120
+    restrictions:
+      - "❌ Không tạo ảnh"
+      - "❌ Không làm video"
+      - "❌ Không đăng bài"
+      - "❌ Không tạo task"
+
+  # ─── TẠO ẢNH ──────────────────────────────────────────────
+  # Image Creator: tạo ảnh creative Facebook
+
+  - id: tao-anh
+    name: "Tạo Ảnh"
+    role: "Facebook Image Creator"
+    status: active
+    telegram:
+      binding: group
+      mention: "@tao-anh"
+    skills:
+      - sang-tao-creative-fb
+      - viet-bai-facebook   # read-only: để hiểu brand voice
+    dispatch_to: "@tao-anh in group chat"
+    input_format: |
+      Caption + concept (image direction, style reference)
+    output_format: |
+      Paired image + caption (image URL + paired text)
+    timeout: 300
+    restrictions:
+      - "❌ Không tự viết caption"
+      - "❌ Không làm video"
+      - "❌ Không đăng bài"
+      - "❌ Không tạo task"
+
+  # ─── LÀM VIDEO ────────────────────────────────────────────
+  # Video Editor: dựng video ngắn TikTok/Reels/Shorts
+
+  - id: lam-video
+    name: "Làm Video"
+    role: "Short-Form Video Editor"
+    status: active
+    telegram:
+      binding: group
+      mention: "@lam-video"
+    skills:
+      - tao-video-ai
+    dispatch_to: "@lam-video in group chat"
+    input_format: |
+      Topic + caption + images (concept, paired caption, reference images)
+    output_format: |
+      MP4 video (15-25s, 9:16 portrait)
+    timeout: 600
+    restrictions:
+      - "❌ Không tự viết content"
+      - "❌ Không tạo ảnh"
+      - "❌ Không đăng khi chưa duyệt"
+      - "❌ Không tạo task"
+
+  # ─── FUTURE WORKERS ───────────────────────────────────────
+  # Thêm worker mới tại đây. Không cần sửa core/*.md.
+  # Ví dụ:
+  #
+  # - id: email-marketer
+  #   name: "Email Marketer"
+  #   role: "Email Sequence Creator"
+  #   status: planned
+  #   telegram:
+  #     binding: group
+  #     mention: "@email-marketer"
+  #   skills:
+  #     - viet-bai-facebook
+  #   dispatch_to: "@email-marketer in group chat"
+  #   timeout: 120
+
+# ============================================================
+# WORKER COUNT
+# ============================================================
+# Số lượng worker active: 3
+# Manager đếm từ workers list, không hardcode.
