@@ -126,14 +126,14 @@
    task_A: viet-bai-fb (ideas: 3 ý tưởng)
    task_B: approval ideas (anh Sáng chọn 1 ý)
    task_C: viet-bai-fb (caption, depends_on: task_B)
-   task_D: tao-anh (image, depends_on: task_B)
-   task_E: lam-video (video, depends_on: task_B)
+   task_D: tao-anh (image, depends_on: task_C)
+   task_E: lam-video (video, depends_on: task_C, optional task_D)
    task_F: approval final (depends_on: C, D, E)
    task_G: publish_fanpage (depends_on: F)
 3. Dispatch A trước
 4. A DONE → Gà gửi 3 ý tưởng cho anh Sáng duyệt
-5. Anh Sáng duyệt ý → unblock C, D, E và set deadline 5 phút
-6. C/D/E chạy song song. Output nào xong trước thì Gà gửi Telegram trước
+5. Anh Sáng duyệt ý → unblock C và set deadline 5 phút cho bài viết
+6. C DONE → Gà gửi bài viết cho anh Sáng, rồi unblock D/E với caption thật
 7. Đủ bài viết + ảnh + video → Gà gửi bản tổng hợp cuối xin duyệt đăng
 8. Anh Sáng duyệt final → Gà đăng Fanpage/Reels
 9. Đăng xong mới complete workflow

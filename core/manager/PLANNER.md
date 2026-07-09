@@ -69,7 +69,7 @@ Planner nhận intent từ `INTENT_ANALYZER.md` và tạo ra **một hoặc nhi�
 
 Áp dụng cho: `create_ad` (nếu cần cả caption + ảnh).
 
-### 2.3 Complex Plan — Team Sync (Ideas → Parallel Production → Publish)
+### 2.3 Complex Plan — Team Sync (Ideas → Caption → Image/Video → Publish)
 
 ```json
 {
@@ -103,15 +103,15 @@ Planner nhận intent từ `INTENT_ANALYZER.md` và tạo ra **một hoặc nhi�
       "id": "task_004",
       "worker": "tao-anh",
       "skill": "sang-tao-creative-fb",
-      "input": { "stage": "image", "use_chosen_idea_from": "task_002" },
-      "depends_on": ["task_002"]
+      "input": { "stage": "image", "use_chosen_idea_from": "task_002", "use_caption_from": "task_003" },
+      "depends_on": ["task_003"]
     },
     {
       "id": "task_005",
       "worker": "lam-video",
       "skill": "tao-video-ai",
-      "input": { "stage": "video", "use_chosen_idea_from": "task_002" },
-      "depends_on": ["task_002"]
+      "input": { "stage": "video", "use_chosen_idea_from": "task_002", "use_caption_from": "task_003", "use_image_from": "task_004" },
+      "depends_on": ["task_003", "task_004"]
     },
     {
       "id": "task_006",
@@ -137,9 +137,11 @@ Planner nhận intent từ `INTENT_ANALYZER.md` và tạo ra **một hoặc nhi�
 
 Quy tắc:
 - Task `ideas` phải chạy trước và trả đúng 3 ý tưởng.
-- Chỉ sau khi anh Sáng duyệt 1 ý tưởng thì mới unblock song song `caption`, `image`, `video`.
-- Ba task `caption`, `image`, `video` dùng chung `campaign_id`, `chosen_idea`, topic, key message và deadline 5 phút.
-- Output nào xong trước thì Manager gửi ngay cho anh Sáng và cập nhật Kanban.
+- Sau khi anh Sáng duyệt 1 ý tưởng, chỉ unblock `caption` trước.
+- Chỉ sau khi `caption` DONE và có bài viết thật thì mới unblock `image`.
+- `video` chỉ chạy sau khi có caption thật; nếu video cần ảnh reference thì chờ `image` DONE.
+- Ba task `caption`, `image`, `video` dùng chung `campaign_id`, `chosen_idea`, topic và key message. Ảnh/video phải bám bài viết.
+- Manager gửi bài viết ngay khi caption xong; sau đó ảnh/video xong output nào thì gửi output đó.
 - `publish` chỉ chạy sau khi anh Sáng duyệt bộ cuối.
 
 ---

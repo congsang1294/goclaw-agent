@@ -160,7 +160,7 @@ Khi message match **nhiều intents**, áp dụng compound rules:
 
 | Tình huống | Cách xử lý |
 |-----------|-------------|
-| User gửi "ok" giữa flow ideas | → `approve` stage=`ideas` — lưu ý tưởng đã chọn, mở task bài/ảnh/video |
+| User gửi "ok" giữa flow ideas | → `approve` stage=`ideas` — lưu ý tưởng đã chọn, chỉ mở task bài viết trước |
 | User gửi "ok đăng" sau khi đủ bộ | → `approve` stage=`final` — mở task publish Fanpage/Reels |
 | User gửi "viết bài + tạo ảnh" | → `team_sync` — cả hai |
 | User gửi "làm video Reels" | → `create_video` — specific nhất |

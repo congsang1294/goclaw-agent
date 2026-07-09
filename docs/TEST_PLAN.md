@@ -54,10 +54,10 @@
 | F6 | Complex: Write → Image | User → Planner → Task A (write) → Task B (image, dep on A) → Aggregate | Paired output |
 | F7 | Complex: Full campaign | User → Planner → Write → Image → Video → Aggregate | Complete campaign output |
 | F8 | Team ideas first | User assigns team task → Cây Bút returns 3 ideas → user approves one | No image/video assigned before idea approval |
-| F9 | Parallel production | After idea approval → caption/image/video tasks unblock together | All 3 share campaign_id + chosen_idea |
+| F9 | Caption before media | After idea approval → caption task runs first → image/video wait for caption | No image/video concept appears before bài viết |
 | F10 | Progress tracking | Workers send `[in_progress]` with progress_percent | Kanban shows worker + % + note |
-| F11 | Partial output first | Image/video/caption finishes before others | Gà sends that output immediately in Telegram |
-| F12 | 5-minute SLA | After idea approval, wait/check deadline | Gà reports late worker and progress if >5 min |
+| F11 | Partial output first | Caption sends first; then image/video output sends as each finishes | Gà sends valid artifact immediately in Telegram |
+| F12 | 5-minute SLA | Caption deadline after idea approval; image/video deadline after caption done | Gà reports late worker and progress if >5 min |
 | F13 | Final approval publish | All outputs delivered → user approves → publish Fanpage/Reels | Publish only after final approval |
 | F14 | Delivery gate | Worker done → Aggregator ready → Telegram sends caption/image/video | DONE only after delivery đủ |
 | F15 | Missing artifact guard | Worker says `[done]` without image/video URL/file | No DONE log; worker asked to resend |

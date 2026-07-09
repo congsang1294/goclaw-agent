@@ -75,9 +75,9 @@ workers:
       - viet-bai-facebook   # read-only: để hiểu brand voice
     dispatch_to: "@tao-anh in group chat"
     input_format: |
-      campaign_id + stage=image + chosen_idea + topic + optional caption/concept
+      campaign_id + stage=image + chosen_idea + topic + caption thật từ viet-bai-fb + optional concept
     output_format: |
-      Paired image + caption. Required for done: campaign_id + stage=image + caption_paired plus image_url or image_local + progress_percent=100.
+      Paired image + caption. Required for done: campaign_id + stage=image + caption_paired plus image_url or image_local + progress_percent=100. Concept/prompt text alone is not DONE.
     timeout: 300
     progress_required: true
     sla_after_idea_approval: 300
@@ -101,9 +101,9 @@ workers:
       - tao-video-ai
     dispatch_to: "@lam-video in group chat"
     input_format: |
-      campaign_id + stage=video + chosen_idea + topic + optional caption/images
+      campaign_id + stage=video + chosen_idea + topic + caption thật từ viet-bai-fb + optional images
     output_format: |
-      MP4 video (15-25s, 9:16 portrait). Required for done: campaign_id + stage=video + video_preview or video_url + progress_percent=100.
+      MP4 video (15-25s, 9:16 portrait). Required for done: campaign_id + stage=video + video_preview or video_url + progress_percent=100. Concept/script text alone is not DONE.
     timeout: 600
     progress_required: true
     sla_after_idea_approval: 300

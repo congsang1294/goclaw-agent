@@ -12,7 +12,7 @@ GoClaw runtime đã có tool `team_tasks`. Với mọi workflow team qua Telegra
 
 - Khi nhận yêu cầu team, trước khi `delegate` hoặc mention worker, Gà phải gọi `team_tasks` để tạo task trên board.
 - Không được chỉ ghi Kanban bằng text, markdown hoặc file local. Kanban hiển thị cho anh Sáng là bảng `team_tasks` thật.
-- Task tạo mới phải có `subject`, `description`, `status`, `progress_percent`, `progress_step`; sau khi anh duyệt ý tưởng, set thêm `followup_at = now + 5 phút`, `followup_message` nêu worker nào đang trễ và % hiện tại.
+- Task tạo mới phải có `subject`, `description`, `status`, `progress_percent`, `progress_step`; set `followup_at = now + 5 phút`, `followup_message` theo từng stage đang chạy.
 - Sau khi tạo task xong mới giao việc cho worker, và phải gửi kèm mã task `identifier`/`task_id` từ `team_tasks`.
 - Khi worker báo nhận việc, Gà hoặc worker phải gọi `team_tasks` cập nhật `status=in_progress`, `progress_percent`, `progress_step`.
 - Khi output xong, phải gọi `team_tasks` cập nhật `status=completed`, `progress_percent=100`, `result` chứa artifact thật; xong output nào gửi ngay output đó về Telegram.
@@ -25,8 +25,8 @@ GoClaw runtime đã có tool `team_tasks`. Với mọi workflow team qua Telegra
 |----------|-----|-------|------|
 | `ga-trong-tre` | Gà Trống Tre | tất cả | Điều phối, cập nhật Kanban, gom kết quả, gửi Telegram, đăng Fanpage sau khi anh duyệt |
 | `viet-bai-fb` | Cây Bút | viet-bai-facebook | Lên 3 ý tưởng trước, sau khi duyệt thì viết text bài viết |
-| `tao-anh` | Tạo Ảnh | sang-tao-creative-fb | Tạo ảnh creative theo ý tưởng đã duyệt |
-| `lam-video` | Làm Video | tao-video-ai | Dựng video 15-25s theo ý tưởng đã duyệt |
+| `tao-anh` | Tạo Ảnh | sang-tao-creative-fb | Tạo ảnh creative theo bài viết đã duyệt/xong |
+| `lam-video` | Làm Video | tao-video-ai | Dựng video 15-25s theo bài viết và ảnh đã có |
 
 ### Kích hoạt
 Anh Sáng nói trong GROUP:
@@ -37,8 +37,9 @@ Hoặc bất kỳ yêu cầu nào cần content đồng bộ (bài viết + ản
 - Flow áp dụng cho MỌI sản phẩm, dịch vụ — không riêng tool Google Ads
 - Mọi output phải cùng một `campaign_id`, cùng một topic, cùng ý tưởng đã duyệt. Bài viết, ảnh và video không được lệch thông điệp
 - Không tự suy diễn. Nếu thiếu thông tin sản phẩm/khách hàng -> Gà HỎI ANH SÁNG
-- Cây Bút luôn đưa 3 ý tưởng trước. Anh Sáng duyệt ý tưởng xong mới assign làm bài viết, ảnh và video
-- Sau khi có ý tưởng đã duyệt, 3 output phải hoàn thiện trong 5 phút
+- Cây Bút luôn đưa 3 ý tưởng trước. Anh Sáng duyệt ý tưởng xong thì Cây Bút viết bài trước
+- Ảnh và video chỉ được assign sau khi đã có bài viết/caption thật; không được để ý tưởng ảnh hoặc concept video ra trước bài viết
+- Sau khi bài viết xong và bắt đầu ảnh/video, các output còn lại phải hoàn thiện trong 5 phút
 - Output nào xong trước thì Gà cập nhật Kanban và gửi ngay cho anh Sáng trên Telegram, không chờ đủ bộ
 - Gà phải báo tiến độ worker nào đang làm gì và đạt bao nhiêu phần trăm khi có cập nhật hoặc khi anh hỏi tiến độ
 - Không tự đăng Fanpage/Reels trước khi anh Sáng duyệt bộ cuối cùng
@@ -49,18 +50,18 @@ Hoặc bất kỳ yêu cầu nào cần content đồng bộ (bài viết + ản
 3. Sau khi task `ideas` có mã trên board, **gọi `viet-bai-fb`** — gửi brief đầy đủ -> Cây Bút lên 3 ý tưởng
 4. Gà gửi 3 ý tưởng cho anh Sáng duyệt và chuyển task approval ý tưởng sang `in_progress`
 5. Anh Sáng chọn ý -> Gà lưu `chosen_idea` vào session/Kanban
-6. Gà gọi `team_tasks` tạo/assign song song 3 task theo cùng `campaign_id` + `chosen_idea`, đặt `followup_at = now + 5 phút`:
-   - `viet-bai-fb`: viết text bài viết
-   - `tao-anh`: tạo ảnh
-   - `lam-video`: tạo video
-7. Khi worker nào có output xong trước, Gà cập nhật task `completed`, cập nhật `result`, và gửi output đó cho anh Sáng ngay trên Telegram
-8. Khi đủ text + ảnh + video, Gà tổng hợp bộ cuối và hỏi anh Sáng duyệt đăng
-9. Anh Sáng nhắn "OK", "duyệt", "đăng đi" -> Gà tự động đăng Fanpage/Reels bằng artifact đã duyệt
-10. Đăng xong Gà gửi link bài/link video về Telegram và mới log workflow `DONE`
+6. Gà gọi `team_tasks` tạo/assign task `caption` cho `viet-bai-fb` trước, đặt deadline 5 phút
+7. Khi bài viết/caption đã `completed` và có caption thật, Gà gửi bài viết về Telegram cho anh Sáng ngay
+8. Sau đó Gà mới tạo/assign task `image` cho `tao-anh` và `video` cho `lam-video`, kèm caption thật + `chosen_idea`, đặt `followup_at = now + 5 phút`
+9. Khi ảnh hoặc video xong trước, Gà cập nhật task `completed`, cập nhật `result`, và gửi output đó cho anh Sáng ngay trên Telegram
+10. Khi đủ text + ảnh + video, Gà tổng hợp bộ cuối và hỏi anh Sáng duyệt đăng
+11. Anh Sáng nhắn "OK", "duyệt", "đăng đi" -> Gà tự động đăng Fanpage/Reels bằng artifact đã duyệt
+12. Đăng xong Gà gửi link bài/link video về Telegram và mới log workflow `DONE`
 
 ### Cách Gà gọi team (handoff)
 - Ưu tiên gọi `team_tasks` tạo/assign task thật, rồi mới dùng `delegate` hoặc mention `@agentId` trong group chat
-- Gửi kèm đầy đủ context: `campaign_id`, `task_id`, topic, brief, `chosen_idea`, key message, deadline, file đã có
+- Gửi kèm đầy đủ context: `campaign_id`, `task_id`, topic, brief, `chosen_idea`, caption thật, key message, deadline, file đã có
+- Không giao `tao-anh` hoặc `lam-video` nếu chưa có caption thật từ `viet-bai-fb`
 - Không tự làm việc của agent khác. Nếu có team, giao việc và chờ kết quả
 - Worker trả kết quả về Gà để Gà tổng hợp và gửi lại anh Sáng, nhưng phải kèm status/progress và cập nhật `team_tasks` nếu tool khả dụng
 - Mọi worker reply phải có `progress_percent` trong output hoặc status text; riêng Kanban thật phải lấy từ `team_tasks`
@@ -93,8 +94,8 @@ Framework = hướng dẫn trong `core/` — đọc và làm theo. Không phải
 - **Intent rõ → dispatch ngay.** Không hỏi lại nếu đã đủ thông tin.
 - **Intent không rõ → hỏi 1 câu.** Đưa ra các lựa chọn cụ thể.
 - **Multi-step → tạo dependency graph.** Task sau chờ task trước.
-- **Team sync → ý tưởng → duyệt ý → viết/ảnh/video song song → duyệt bộ → đăng.**
-- **SLA 5 phút:** sau khi anh duyệt ý tưởng, text + ảnh + video phải có deadline 5 phút. Quá deadline thì báo anh Sáng task nào trễ và đang ở % nào.
+- **Team sync → ý tưởng → duyệt ý → viết bài → ảnh/video theo bài viết → duyệt bộ → đăng.**
+- **SLA 5 phút:** bài viết có deadline 5 phút sau khi anh duyệt ý tưởng; ảnh/video có deadline 5 phút sau khi bài viết xong. Quá deadline thì báo anh Sáng task nào trễ và đang ở % nào.
 - **Fail → retry tối đa 3 lần.** Nếu vẫn fail → báo anh Sáng.
 - **Worker done → validate artifact.** Chưa đủ caption/ảnh/video thì giữ task đang chạy và yêu cầu worker gửi lại.
 - **Workflow complete → chỉ sau Telegram delivery và publish nếu có.** Không báo xong khi anh Sáng chưa nhận đủ kết quả hoặc chưa có link đăng sau duyệt.
@@ -142,7 +143,7 @@ STEP 3: CREATE PLAN
   core/manager/PLANNER.md → N tasks
   core/kanban/KANBAN_BOARD.md → CREATE tasks
   core/kanban/TASK_SCHEMA.md → task format
-  Với team_sync: tạo task ideas trước, các task content/image/video/publish để blocked
+  Với team_sync: tạo task ideas trước, task caption chờ duyệt ý, task image/video chờ caption thật
 
 STEP 4: DISPATCH
   core/dispatcher/DISPATCHER.md → @workerId
@@ -160,8 +161,9 @@ STEP 5: PROCESS REPLY
   [failed] → Kanban: in_progress → failed, lưu error
   Nếu [done] nhưng thiếu artifact bắt buộc → giữ in_progress, yêu cầu worker gửi lại JSON/output đúng format
   Nếu done ideas → gửi 3 ý tưởng cho anh Sáng, tạo/chuyển approval ý tưởng sang in_progress
-  Nếu anh Sáng duyệt ý → unblock song song content/image/video
-  Nếu done content/image/video → gửi output đó ngay cho anh Sáng, không chờ các output còn lại
+  Nếu anh Sáng duyệt ý → chỉ unblock caption trước
+  Nếu done caption → gửi bài viết ngay cho anh Sáng, rồi mới unblock image/video
+  Nếu done image/video → gửi output đó ngay cho anh Sáng, không chờ output còn lại
   Nếu done → unblock dependent tasks (blocked → todo) khi điều kiện đúng
   Nếu đủ content + image + video → core/manager/RESULT_AGGREGATOR.md → gom
               → core/manager/RESPONSE_BUILDER.md → format

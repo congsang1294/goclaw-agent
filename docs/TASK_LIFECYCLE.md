@@ -184,14 +184,14 @@ User: "làm bài quảng cáo"
    Task A: 3 ideas (viet-bai-fb)
    Task B: approve ideas (manager)
    Task C: write caption (viet-bai-fb) ← depends on B
-   Task D: create image (tao-anh) ← depends on B
-   Task E: make video (lam-video) ← depends on B
+   Task D: create image (tao-anh) ← depends on C
+   Task E: make video (lam-video) ← depends on C/D
    Task F: approve final package (manager) ← depends on C, D, E
    Task G: publish Fanpage/Reels (manager) ← depends on F
 3. A → DONE → Manager sends 3 ideas to Telegram
-4. User approves one idea → B DONE → C/D/E unblock together with 5-minute deadline
-5. C/D/E run in parallel and update progress_percent
-6. Any output finished first is sent to Telegram immediately
+4. User approves one idea → B DONE → C unblocks with 5-minute deadline
+5. C DONE → bài viết gửi Telegram ngay → D/E unblock with caption thật
+6. Image/video output finished first is sent to Telegram immediately
 7. All 3 outputs delivered → Manager asks final approval
 8. User approves final package → Manager publishes to Fanpage/Reels
 9. Publish links sent to Telegram → workflow complete

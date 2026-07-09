@@ -20,7 +20,7 @@ Trong GoClaw Telegram runtime, `team_tasks` là Kanban thật. Session file (`me
 1. Mọi workflow team phải gọi `team_tasks` tạo task trước khi delegate worker.
 2. Mọi progress phải đi qua `team_tasks` (`progress_percent`, `progress_step`), rồi mới báo text.
 3. Mọi output xong phải được lưu vào `team_tasks.result` và gửi ngay về Telegram.
-4. SLA 5 phút là mốc báo trễ: set `followup_at = now + 5 phút` cho caption/image/video sau duyệt ý tưởng. Quá hạn thì báo worker nào trễ, % nào, đang ở bước nào, rồi tiếp tục chạy/retry.
+4. SLA 5 phút là mốc báo trễ: caption tính từ lúc anh duyệt ý tưởng; image/video tính từ lúc caption DONE. Quá hạn thì báo worker nào trễ, % nào, đang ở bước nào, rồi tiếp tục chạy/retry.
 5. Nếu không gọi được `team_tasks`, phải báo lỗi Kanban cho anh Sáng, không được tự nhận complete.
 
 ---
@@ -62,8 +62,8 @@ STEP 3: CREATE PLAN
   Với `team_sync`:
     → Tạo `campaign_id`
     → Tạo task ideas đầu tiên cho `viet-bai-fb`
-    → Tạo sẵn các task content/image/video/final_approval/publish_fanpage ở trạng thái BLOCKED
-    → Set deadline 5 phút cho các task content/image/video sau khi ideas được duyệt
+    → Tạo sẵn các task caption/image/video/final_approval/publish_fanpage ở trạng thái BLOCKED
+    → caption chờ anh Sáng duyệt ideas; image/video chờ caption thật
 
 STEP 4: DISPATCH
   Đọc core/dispatcher/DISPATCHER.md
@@ -81,7 +81,8 @@ STEP 5: PROCESS WORKER REPLY
   → Nếu [done] → parse output JSON → validate artifact bắt buộc → nếu hợp lệ mới gọi `team_tasks` completed
   → Nếu [failed] → parse error → gọi `team_tasks` failed
   → Nếu task ideas DONE → gửi 3 ý tưởng cho anh Sáng và tạo/chuyển approval ý tưởng sang IN_PROGRESS
-  → Nếu task content/image/video DONE → gửi artifact đó ngay cho anh Sáng, cập nhật delivery.sent
+  → Nếu task caption DONE → gửi bài viết ngay cho anh Sáng, rồi mới mở image/video
+  → Nếu task image/video DONE → gửi artifact đó ngay cho anh Sáng, cập nhật delivery.sent
   → Nếu task publish_fanpage DONE → gửi link Fanpage/Reels về Telegram và log DONE
 
 STEP 5a: UNLOCK DEPENDENCIES
@@ -90,13 +91,14 @@ STEP 5a: UNLOCK DEPENDENCIES
     → Unblock: BLOCKED → TODO
     → Save session
   Riêng team_sync:
-    → Không unblock content/image/video chỉ vì ideas task done
-    → Chỉ unblock content/image/video khi anh Sáng đã approve một `chosen_idea`
+    → Không unblock caption/image/video chỉ vì ideas task done
+    → Chỉ unblock caption khi anh Sáng đã approve một `chosen_idea`
+    → Chỉ unblock image/video khi caption DONE và có bài viết thật
     → Sau khi đủ content + image + video delivered, unblock final_approval
     → Sau khi final_approval done, unblock publish_fanpage
 
 STEP 5b: CHECK ALL DONE
-  Nếu output content/image/video nào vừa DONE:
+  Nếu output caption/image/video nào vừa DONE:
     → Đọc RESPONSE_BUILDER.md → gửi output đó ngay cho anh Sáng
     → Không chờ đủ bộ mới gửi
   Nếu đủ content + image + video đều DONE và delivered:
@@ -120,8 +122,11 @@ STEP 5d: APPROVAL + PUBLISH
   Khi anh Sáng approve ideas:
     → Lưu chosen_idea vào session
     → Set approval ideas task DONE
-    → Unblock content/image/video song song
+    → Chỉ unblock caption
     → Dispatch task TODO kế tiếp theo Dispatcher
+  Khi caption DONE:
+    → Gửi bài viết cho anh Sáng ngay
+    → Unblock image trước; video chờ caption + ảnh nếu cần reference
   Khi anh Sáng approve final:
     → Set final_approval DONE
     → Unblock publish_fanpage
@@ -281,7 +286,7 @@ Luôn dùng append, không ghi đè. Mỗi dòng một JSON object.
 ```
 1. Intent = approve
 2. Kiểm tra approval task đang in_progress:
-   a. stage = "ideas" → parse số ý tưởng anh chọn, lưu chosen_idea, log APPROVED, unblock content/image/video
+   a. stage = "ideas" → parse số ý tưởng anh chọn, lưu chosen_idea, log APPROVED, chỉ unblock caption
    b. stage = "final" → log APPROVED, unblock publish_fanpage, tự động đăng Fanpage/Reels
 3. Nếu không có approval task → "không có gì để duyệt"
 ```
