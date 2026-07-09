@@ -11,7 +11,7 @@
 
 Dispatcher chịu trách nhiệm:
 1. Gửi task đến worker qua GoClaw `@agentId` trong group chat
-2. Parse reply từ worker để cập nhật Kanban
+2. Parse reply từ worker để cập nhật Kanban thật bằng `team_tasks`
 3. Ghi log mỗi lần dispatch
 
 **Cơ chế:** Manager (Gà Trống Tre) đọc file này để biết CÁCH dispatch.
@@ -20,6 +20,9 @@ Không phải code runtime — là hướng dẫn cho Manager.
 ---
 
 ## 2. Dispatch Runtime Flow
+
+Trong GoClaw Telegram runtime, trước khi dispatch phải có task thật trên `team_tasks`.
+Nếu chưa có task id/identifier từ `team_tasks`, Manager tạo task trước rồi mới gọi worker.
 
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -73,10 +76,9 @@ STEP 6: SEND VIA GOCLAW
   → GoClaw tự động route mention đến worker agent
 
 STEP 7: UPDATE KANBAN
-  task.status = "in_progress"
-  task.assigned_at = now
-  task.updated_at = now
-  GHI session file
+  gọi `team_tasks` update task.status = "in_progress"
+  cập nhật progress_percent/progress_step nếu có
+  session file chỉ cache phụ, không thay thế `team_tasks`
 
 STEP 8: LOG
   {"event":"DISPATCH","timestamp":"...","task_id":"...","worker":"...","skill":"...","attempt":1}
@@ -95,9 +97,9 @@ Manager parse marker để biết trạng thái.
 
 | Marker | Ý nghĩa | Manager hành động |
 |--------|---------|-------------------|
-| `[in_progress]` | Worker đã nhận, đang xử lý | Parse progress_percent/progress_note. Update Kanban progress. Log WORKER_PROGRESS. |
-| `[done]` | Worker hoàn thành và output đủ artifact bắt buộc | Parse output JSON sau marker. Validate output. Update Kanban → DONE. Log WORKER_FINISH. |
-| `[failed]` | Worker lỗi | Parse error message. Update Kanban → FAILED. Log WORKER_FINISH. |
+| `[in_progress]` | Worker đã nhận, đang xử lý | Parse progress_percent/progress_note. Gọi `team_tasks` update progress. Log WORKER_PROGRESS. |
+| `[done]` | Worker hoàn thành và output đủ artifact bắt buộc | Parse output JSON sau marker. Validate output. Gọi `team_tasks` completed + result. Log WORKER_FINISH. |
+| `[failed]` | Worker lỗi | Parse error message. Gọi `team_tasks` failed. Log WORKER_FINISH. |
 
 ### 3.2 Parse Rules
 
@@ -110,14 +112,14 @@ Manager parse marker để biết trạng thái.
    b. Parse output vào task.output
    c. Validate required artifacts theo mục 3.4
    d. Nếu thiếu artifact: KHÔNG update DONE; giữ IN_PROGRESS và yêu cầu worker gửi lại output đúng format
-   e. Nếu đủ artifact: Update Kanban: task → DONE, delivery.status = "ready"
+   e. Nếu đủ artifact: gọi `team_tasks` completed, progress_percent=100, result=artifact JSON
 5. Nếu có [failed]:
    a. Tìm error message
-   b. Update Kanban: task → FAILED, task.error = error
+   b. Gọi `team_tasks` failed, result/error = error
 6. Nếu [in_progress]:
    a. Parse progress_percent nếu có
    b. Parse progress_note hoặc mô tả worker đang làm gì
-   c. Update task.progress_percent, task.progress_note, task.updated_at
+   c. Gọi `team_tasks` update progress_percent, progress_step, updated_at
    d. Log WORKER_PROGRESS
    e. Giữ task IN_PROGRESS và chờ turn sau
 ```

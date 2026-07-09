@@ -1,7 +1,7 @@
 # KANBAN BOARD
 
 > **File:** `core/kanban/KANBAN_BOARD.md`
-> **Role:** File-based CRUD operations for task management — the runtime Kanban
+> **Role:** Runtime Kanban contract for `team_tasks`
 > **Part of:** Kanban / Task System
 > **Phase:** 4 — Runtime Integration
 
@@ -10,8 +10,17 @@
 ## 1. Mục đích
 
 Kanban Board là **runtime data layer** cho tất cả tasks.
-Manager đọc/ghi Kanban state từ file session: `memory/sessions/session_YYYY-MM-DD.json`.
-Không dùng in-memory — mọi thay đổi đều ghi vào file để resume được sau mỗi turn.
+Trong GoClaw Telegram runtime, Kanban thật là tool/bảng `team_tasks`.
+File session chỉ là cache phụ khi tool không khả dụng; không được dùng file local thay cho `team_tasks` nếu runtime đã expose tool này.
+
+## 0. GoClaw Runtime Rule
+
+- Tạo task: gọi `team_tasks` trước khi delegate/mention worker.
+- Cập nhật progress: gọi `team_tasks` với `status=in_progress`, `progress_percent`, `progress_step`.
+- Hoàn thành: gọi `team_tasks` với `status=completed`, `progress_percent=100`, `result` chứa output thật.
+- Nhắc quá hạn 5 phút: set `followup_at`, `followup_message`, `followup_channel`, `followup_chat_id` nếu tool schema hỗ trợ.
+- Nếu `team_tasks` lỗi: báo anh Sáng ngay "Kanban tool chưa cập nhật được"; không báo complete giả.
+- Chỉ dùng file/session memory làm cache phụ hoặc fallback; trạng thái hiển thị cho anh Sáng phải nằm trong `team_tasks`.
 
 ---
 

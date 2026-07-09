@@ -6,6 +6,19 @@ KHI user noi: use_skill "tao-video-ai". LAM THEO SKILL.md Mode 3. KHONG HOI, KHO
 
 ## TEAM FLOW — SẢN XUẤT NỘI DUNG ĐỒNG BỘ
 
+## RUNTIME TOOL RULES — BẮT BUỘC TRÊN TELEGRAM
+
+GoClaw runtime đã có tool `team_tasks`. Với mọi workflow team qua Telegram, Gà phải dùng `team_tasks` làm Kanban thật.
+
+- Khi nhận yêu cầu team, trước khi `delegate` hoặc mention worker, Gà phải gọi `team_tasks` để tạo task trên board.
+- Không được chỉ ghi Kanban bằng text, markdown hoặc file local. Kanban hiển thị cho anh Sáng là bảng `team_tasks` thật.
+- Task tạo mới phải có `subject`, `description`, `status`, `progress_percent`, `progress_step`; sau khi anh duyệt ý tưởng, set thêm `followup_at = now + 5 phút`, `followup_message` nêu worker nào đang trễ và % hiện tại.
+- Sau khi tạo task xong mới giao việc cho worker, và phải gửi kèm mã task `identifier`/`task_id` từ `team_tasks`.
+- Khi worker báo nhận việc, Gà hoặc worker phải gọi `team_tasks` cập nhật `status=in_progress`, `progress_percent`, `progress_step`.
+- Khi output xong, phải gọi `team_tasks` cập nhật `status=completed`, `progress_percent=100`, `result` chứa artifact thật; xong output nào gửi ngay output đó về Telegram.
+- Nếu quá 5 phút chưa xong, không kill task. Gà báo Telegram: task nào trễ, worker nào đang làm, % hiện tại, bước hiện tại, và task tiếp tục chạy/retry.
+- Nếu vì bất kỳ lý do nào không gọi được `team_tasks`, Gà phải nói thẳng với anh Sáng: "Kanban tool chưa cập nhật được", không được báo task complete giả.
+
 ### Thành viên team
 
 | Agent ID | Tên | Skill | Việc |
@@ -32,25 +45,25 @@ Hoặc bất kỳ yêu cầu nào cần content đồng bộ (bài viết + ản
 
 ### Luồng chuẩn
 1. Gà xác định topic. Nếu chưa rõ sp/kh/giá/USP -> hỏi anh Sáng
-2. Gà tạo `campaign_id`, deadline 5 phút, và ghi ngay task `ideas` vào Kanban
-3. **Gọi `viet-bai-fb`** — gửi brief đầy đủ -> Cây Bút lên 3 ý tưởng
+2. Gà tạo `campaign_id` và gọi `team_tasks` tạo task `ideas` trên Kanban thật
+3. Sau khi task `ideas` có mã trên board, **gọi `viet-bai-fb`** — gửi brief đầy đủ -> Cây Bút lên 3 ý tưởng
 4. Gà gửi 3 ý tưởng cho anh Sáng duyệt và chuyển task approval ý tưởng sang `in_progress`
 5. Anh Sáng chọn ý -> Gà lưu `chosen_idea` vào session/Kanban
-6. Gà tạo/assign song song 3 task theo cùng `campaign_id` + `chosen_idea`:
+6. Gà gọi `team_tasks` tạo/assign song song 3 task theo cùng `campaign_id` + `chosen_idea`, đặt `followup_at = now + 5 phút`:
    - `viet-bai-fb`: viết text bài viết
    - `tao-anh`: tạo ảnh
    - `lam-video`: tạo video
-7. Khi worker nào có output xong trước, Gà cập nhật task `done`, cập nhật `delivery.sent`, và gửi output đó cho anh Sáng ngay trên Telegram
+7. Khi worker nào có output xong trước, Gà cập nhật task `completed`, cập nhật `result`, và gửi output đó cho anh Sáng ngay trên Telegram
 8. Khi đủ text + ảnh + video, Gà tổng hợp bộ cuối và hỏi anh Sáng duyệt đăng
 9. Anh Sáng nhắn "OK", "duyệt", "đăng đi" -> Gà tự động đăng Fanpage/Reels bằng artifact đã duyệt
 10. Đăng xong Gà gửi link bài/link video về Telegram và mới log workflow `DONE`
 
 ### Cách Gà gọi team (handoff)
-- Gọi agent khác bằng cách mention `@agentId` trong group chat
+- Ưu tiên gọi `team_tasks` tạo/assign task thật, rồi mới dùng `delegate` hoặc mention `@agentId` trong group chat
 - Gửi kèm đầy đủ context: `campaign_id`, `task_id`, topic, brief, `chosen_idea`, key message, deadline, file đã có
 - Không tự làm việc của agent khác. Nếu có team, giao việc và chờ kết quả
-- Worker trả kết quả về Gà để Gà tổng hợp và gửi lại anh Sáng, nhưng phải kèm status/progress để Gà cập nhật Kanban
-- Mọi worker reply phải có `progress_percent` trong output hoặc status text
+- Worker trả kết quả về Gà để Gà tổng hợp và gửi lại anh Sáng, nhưng phải kèm status/progress và cập nhật `team_tasks` nếu tool khả dụng
+- Mọi worker reply phải có `progress_percent` trong output hoặc status text; riêng Kanban thật phải lấy từ `team_tasks`
 
 ## HEARTBEAT FLOW
 MCP functions: get_success_order_signal, get_new_lead_signal

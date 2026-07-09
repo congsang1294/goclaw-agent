@@ -13,7 +13,15 @@ Orchestration file này là **runtime executable** — Manager (Gà Trống Tre)
 Không phải tài liệu tham khảo. Đây là "main loop" của framework.
 
 **Cơ chế hoạt động:** Mỗi lần GoClaw agent runtime nhận tin nhắn Telegram → chạy flow này từ đầu.
-Session file (`memory/sessions/session_YYYY-MM-DD.json`) lưu trạng thái Kanban để resume.
+Trong GoClaw Telegram runtime, `team_tasks` là Kanban thật. Session file (`memory/sessions/session_YYYY-MM-DD.json`) chỉ lưu cache/resume phụ khi tool không khả dụng.
+
+## 0. Telegram Runtime Hard Rules
+
+1. Mọi workflow team phải gọi `team_tasks` tạo task trước khi delegate worker.
+2. Mọi progress phải đi qua `team_tasks` (`progress_percent`, `progress_step`), rồi mới báo text.
+3. Mọi output xong phải được lưu vào `team_tasks.result` và gửi ngay về Telegram.
+4. SLA 5 phút là mốc báo trễ: set `followup_at = now + 5 phút` cho caption/image/video sau duyệt ý tưởng. Quá hạn thì báo worker nào trễ, % nào, đang ở bước nào, rồi tiếp tục chạy/retry.
+5. Nếu không gọi được `team_tasks`, phải báo lỗi Kanban cho anh Sáng, không được tự nhận complete.
 
 ---
 
@@ -26,7 +34,7 @@ TURN START — Telegram message received
 
 STEP 0: LOAD SESSION
   Đọc memory/sessions/session_{today}.json
-  → Lấy danh sách active tasks (Kanban state)
+  → Lấy danh sách active tasks bằng `team_tasks` nếu tool khả dụng
   → Lấy task sequence counter
   → Nếu file không tồn tại → tạo mới
 
@@ -50,7 +58,7 @@ STEP 3: CREATE PLAN
   Đọc core/manager/PLANNER.md
   → Dùng intent → sinh 1 hoặc nhiều tasks
   → Mỗi task theo TASK_SCHEMA.md
-  → Ghi tasks vào Kanban (STEP 7)
+  → Gọi `team_tasks` tạo tasks (STEP 7)
   Với `team_sync`:
     → Tạo `campaign_id`
     → Tạo task ideas đầu tiên cho `viet-bai-fb`
@@ -64,14 +72,14 @@ STEP 4: DISPATCH
   → Assemble context (CONTEXT_ASSEMBLER.md)
   → Assemble prompt (PROMPT_ASSEMBLY.md)
   → Gửi @workerId trong group chat
-  → Update Kanban: task → IN_PROGRESS
+  → Gọi `team_tasks` update task → IN_PROGRESS
 
 STEP 5: PROCESS WORKER REPLY
   Đọc reply từ worker (tin nhắn group chat)
   → Parse status ở đầu câu: [done] | [failed] | [in_progress]
-  → Nếu [in_progress] → parse progress_percent/progress_note → update Kanban, log WORKER_PROGRESS
-  → Nếu [done] → parse output JSON → validate artifact bắt buộc → nếu hợp lệ mới update Kanban: task → DONE
-  → Nếu [failed] → parse error → update Kanban: task → FAILED
+  → Nếu [in_progress] → parse progress_percent/progress_note → gọi `team_tasks` update progress, log WORKER_PROGRESS
+  → Nếu [done] → parse output JSON → validate artifact bắt buộc → nếu hợp lệ mới gọi `team_tasks` completed
+  → Nếu [failed] → parse error → gọi `team_tasks` failed
   → Nếu task ideas DONE → gửi 3 ý tưởng cho anh Sáng và tạo/chuyển approval ý tưởng sang IN_PROGRESS
   → Nếu task content/image/video DONE → gửi artifact đó ngay cho anh Sáng, cập nhật delivery.sent
   → Nếu task publish_fanpage DONE → gửi link Fanpage/Reels về Telegram và log DONE
