@@ -68,11 +68,23 @@ Steps:
      // hoặc
      "status": "blocked",                      // depends_on không rỗng
      "priority": "normal",
+     "campaign_id": "campaign_20260709_001",
+     "stage": "ideas",
      "worker": "viet-bai-fb",
      "skill": "viet-bai-facebook",
      "input": { "topic": "..." },
      "output": null,
      "error": null,
+     "delivery": {
+       "status": "not_ready",
+       "required": [],
+       "sent": [],
+       "telegram_message_id": null,
+       "delivered_at": null,
+       "error": null
+     },
+     "progress_percent": 0,
+     "progress_note": null,
      "attempts": 0,
      "max_retries": 3,
      "parent_task": null,
@@ -80,6 +92,7 @@ Steps:
      "created_at": "2026-07-09T10:00:00+07:00",
      "updated_at": "2026-07-09T10:00:00+07:00",
      "assigned_at": null,
+     "deadline_at": null,
      "completed_at": null
    }
 5. Thêm vào tasks array
@@ -97,9 +110,11 @@ Steps:
 2. Tìm task theo id trong tasks array
 3. Cập nhật status thành new_status
 4. Cập nhật updated_at = now
-5. Nếu additional_fields (output, error) → cập nhật
+5. Nếu additional_fields (output, error, progress_percent, progress_note, delivery, deadline_at) → cập nhật
 6. Nếu status = in_progress → set assigned_at = now
 7. Nếu status = done/failed → set completed_at = now
+8. Nếu status = done → validate output và set delivery.status = "ready"
+9. Sau khi gửi Telegram đủ artifact → set delivery.status = "sent", delivery.delivered_at = now
 8. GHI file
 ```
 
@@ -110,8 +125,12 @@ Steps:
 | Enqueue | created | todo | — |
 | Enqueue có dep | created | blocked | — |
 | Dispatch | todo | in_progress | assigned_at = now |
+| Progress update | in_progress | in_progress | progress_percent, progress_note, updated_at |
 | Worker hoàn thành | in_progress | done | output, completed_at = now |
 | Worker lỗi | in_progress | failed | error, attempts += 1 |
+| Output sẵn sàng gửi | done | done | delivery.status = ready, delivery.required = [...] |
+| Đã gửi Telegram đủ artifact | done | done | delivery.status = sent, delivery.sent, delivered_at |
+| Gửi Telegram lỗi | done | done | delivery.status = failed, delivery.error |
 | Retry — còn lượt | failed | retrying | — |
 | Retry — dispatch lại | retrying | in_progress | assigned_at = now |
 | Retry — hết lượt | retrying | failed | — |
@@ -142,6 +161,7 @@ Các truy vấn:
 - Tìm task TODO đầu tiên: tasks.find(t => t.status === "todo")
 - Tìm task IN_PROGRESS: tasks.filter(t => t.status === "in_progress")
 - Kiểm tra all DONE: tasks.every(t => t.status === "done" || t.status === "cancelled")
+- Kiểm tra all DELIVERED: tasks.every(t => t.status !== "done" || t.delivery?.status === "sent" || t.type === "internal")
 - Tìm task FAILED retryable: tasks.find(t => t.status === "failed" && t.attempts < t.max_retries)
 ```
 
@@ -155,6 +175,9 @@ Các truy vấn:
 | "Có task chờ không?" | `tasks.filter(t => t.status === 'todo')` |
 | "Task [id] tới đâu rồi?" | `tasks.find(t => t.id === id)?.status` |
 | "All tasks done?" | `tasks.every(t => ['done','cancelled'].includes(t.status))` |
+| "Đã gửi đủ kết quả về Telegram?" | `tasks.every(t => t.status !== 'done' || t.delivery?.status === 'sent')` |
+| "Tiến độ từng worker?" | `tasks.filter(t => ['todo','in_progress','blocked'].includes(t.status)).map(t => [t.worker, t.stage, t.progress_percent, t.progress_note])` |
+| "Task nào quá deadline?" | `tasks.filter(t => t.deadline_at && now > t.deadline_at && t.status !== 'done')` |
 | "Có task nào lỗi?" | `tasks.filter(t => t.status === 'failed')` |
 | "Task nào chờ dependency?" | `tasks.filter(t => t.status === 'blocked')` |
 | "Task TODO đầu tiên?" | `tasks.find(t => t.status === 'todo')` |

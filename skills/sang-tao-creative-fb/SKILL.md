@@ -223,7 +223,7 @@ Khi skill này chạy trong context của một Task (Worker Tạo Ảnh), Worke
 | Nhận task, bắt đầu gen ý tưởng | `in_progress` | Ngay sau khi nhận task |
 | Đang gen ảnh (OpenAI) | `in_progress` | Chạy gen_image.py |
 | Đang chờ duyệt | `in_progress` | Đã gửi preview, chờ Manager OK |
-| Hoàn thành | `done` | Đã trả ảnh + caption ghép cặp |
+| Hoàn thành | `done` | Đã trả ảnh + caption ghép cặp, có file/link ảnh thật |
 | Lỗi OpenAI | `failed` | Retry 1 lần → vẫn fail |
 
 ### Progress Reporting
@@ -239,6 +239,13 @@ Khi skill này chạy trong context của một Task (Worker Tạo Ảnh), Worke
 - **Thiếu concept:** Hỏi Manager concept cụ thể. Vẫn `in_progress`.
 
 ### Output Delivery
+
+Chỉ trả `status: "done"` khi có đủ:
+- `caption_paired`
+- ít nhất một trong `image_url`, `image_local`
+
+Nếu ảnh đã tạo nhưng chưa public URL, trả `image_local` để Manager gửi file về Telegram.
+Nếu thiếu artifact, dùng `in_progress` hoặc `failed`, không được báo done.
 
 ```json
 {
@@ -259,4 +266,3 @@ Khi lỗi:
   "error": "OpenAI API: rate limit exceeded after 1 retry"
 }
 ```
-

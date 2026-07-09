@@ -1,13 +1,13 @@
 ---
 name: tao-video-ai
-description: "BẮT BUỘC dùng khi user nói video, Video, tạo video, làm video, đăng video, Reels hoặc Facebook Reels. Tự tạo video AI 15-30s cho Google Ads Match Type Converter bằng OpenAI-KenBurns hoặc Kling 1-key, tự đăng Facebook Reels, rồi trả link về Telegram. Không dùng create_image, không trả JSON ảnh, không hỏi lại."
+description: "BẮT BUỘC dùng khi user nói video, Video, tạo video, làm video, đăng video, Reels hoặc Facebook Reels. Tạo video AI 15-30s bằng OpenAI-KenBurns hoặc Kling, trả preview/file/link video về Telegram trước; chỉ đăng Facebook Reels sau khi anh Sáng duyệt. Không dùng create_image, không trả JSON ảnh, không hỏi lại."
 ---
 
-# TAO VIDEO AI — AUTO FACEBOOK REELS
+# TAO VIDEO AI — PREVIEW FIRST, POST AFTER APPROVAL
 
 ## Mục tiêu
 
-Khi anh Sáng nhắn `video`, Gà phải tự tạo video AI và tự đăng lên Facebook Reels. Không dừng ở kịch bản, không tạo ảnh riêng, không hỏi thêm.
+Khi anh Sáng nhắn `video`, Gà phải tạo video AI và trả preview/file/link về Telegram trước. Không tự đăng Facebook Reels trước khi anh Sáng duyệt.
 
 ## Luồng chuẩn hiện tại
 
@@ -26,7 +26,7 @@ python3 scripts/video_auto_facebook.py
   "status": "gen",
   "topic": "Google Ads Match Type Converter - chuyển đổi match type nhanh cho nhà quảng cáo",
   "caption": "default",
-  "auto_post_facebook": true
+  "auto_post_facebook": false
 }
 ```
 
@@ -35,12 +35,12 @@ python3 scripts/video_auto_facebook.py
    - `gen-video.py` tạo `video_raw.mp4` bằng provider hợp lệ.
    - `gen-voice.py` tạo `voice.mp3`.
    - `build-final.py` tạo `final.mp4` và gửi preview video về Telegram.
-   - `post_video.py` đăng `final.mp4` lên Facebook Reels.
-   - Watcher gửi link Facebook Reels về Telegram.
+   - Không gọi `post_video.py` ở bước preview.
+   - Chờ anh Sáng duyệt rồi mới đăng Facebook Reels.
 
 6. Sau khi chạy command, Gà chỉ trả lời:
 
-`Em đang tạo video và sẽ tự đăng Facebook Reels cho anh Sáng. Xong em gửi link lại ngay.`
+`Em đang tạo video preview cho anh Sáng. Xong em gửi video ở Telegram để anh duyệt trước.`
 
 ## Provider video
 
@@ -87,7 +87,7 @@ facebook-post-video
 - Không hỏi style/kích thước/video sản phẩm gì nếu anh chỉ nhắn `video`.
 - Không đề xuất Canva, InVideo, CapCut.
 - Không nói “hệ thống chưa hỗ trợ tạo video”.
-- Không nói “chưa có quyền đăng Facebook”.
+- Không nói “chưa có quyền đăng Facebook” nếu env đã có token; nhưng vẫn phải chờ anh Sáng duyệt trước khi đăng.
 - Không dùng `/tmp/video-pipeline.trigger`; trigger phải nằm trong workspace hiện tại.
 - Không tự hứa TikTok/Youtube khi chưa setup API. Flow hiện tại chỉ chốt Facebook Reels.
 
@@ -133,6 +133,15 @@ Worker nên báo progress định kỳ nếu pipeline chạy >30s:
 - **ffmpeg error:** `failed` + error log. Không retry.
 
 ### Output Delivery
+
+Chỉ trả `status: "done"` khi có video thật để Manager gửi Telegram:
+- ưu tiên `video_preview`
+- nếu không có preview thì phải có `video_url`
+- nếu mới có file local, ghi path đó vào `video_preview`
+
+Nếu render/upload chưa xong, dùng `in_progress`.
+Nếu provider fail hết lượt, dùng `failed`.
+Không báo done khi chưa có preview/file/link video.
 
 ```json
 {

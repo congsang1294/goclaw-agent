@@ -115,7 +115,7 @@ A Task is the **atomic unit of work** in the AI Team Framework. Everything flows
 | `created` | Task created but not queued | Task creation |
 | `todo` | In Kanban queue, ready for dispatch | Manager enqueue |
 | `in_progress` | Worker is executing | Worker picks up task |
-| `done` | Successfully completed | Worker returns output |
+| `done` | Worker output is valid and ready for delivery | Worker returns required artifacts |
 | `failed` | Execution error (may retry) | Script error, API failure |
 | `retrying` | Retry in progress | Retry Manager triggers |
 | `blocked` | Waiting on dependency | depends_on not all done |
@@ -134,8 +134,9 @@ A Task is the **atomic unit of work** in the AI Team Framework. Everything flows
 4. Dispatcher assigns to Worker
 5. Worker picks up → IN_PROGRESS
 6. Worker executes skill
-7. Success → DONE, output stored
-8. Manager reads output → Response sent
+7. Success + required artifact present → DONE, output stored
+8. Manager sends output to Telegram
+9. Delivery confirmed → workflow complete
 ```
 
 ### 4.2 Complex Flow (Multi-Step with Dependencies)
@@ -151,8 +152,10 @@ A Task is the **atomic unit of work** in the AI Team Framework. Everything flows
 5. Cây Bút writes caption → Task A → DONE
 6. Manager sees A done → unblocks B
 7. Task B → TODO → tao-anh
-8. Tạo Ảnh creates image → Task B → DONE
-9. Manager aggregates A.output + B.output → Response sent
+8. Tạo Ảnh creates image with file/link → Task B → DONE
+9. Manager aggregates A.output + B.output
+10. Manager sends caption + image to Telegram
+11. Delivery confirmed → workflow complete
 ```
 
 ### 4.3 Retry Flow
@@ -164,7 +167,7 @@ A Task is the **atomic unit of work** in the AI Team Framework. Everything flows
 4. Retry Manager checks: attempts(1) < max_retries(3) → RETRYING
 5. Task → TODO (re-queued)
 6. Worker re-executes → success
-7. Task → DONE
+7. Task → DONE only after output validation
 -- OR --
 6. Worker re-executes → fails 3 times
 7. Task → FAILED, attempts: 3
@@ -177,15 +180,21 @@ A Task is the **atomic unit of work** in the AI Team Framework. Everything flows
 ```
 User: "làm bài quảng cáo"
 1. Manager: intent = "create_ad_campaign"
-2. Planner creates 3 tasks:
-   Task A: write caption (viet-bai-fb)
-   Task B: create image (tao-anh) ← depends on A
-   Task C: make video (lam-video) ← depends on A, B
-3. A → viet-bai-fb → DONE
-4. B → tao-anh → DONE (using A's caption)
-5. C → lam-video → DONE (using A's caption + B's images)
-6. Manager aggregates all 3 outputs
-7. Response sent to user
+2. Planner creates full Kanban plan:
+   Task A: 3 ideas (viet-bai-fb)
+   Task B: approve ideas (manager)
+   Task C: write caption (viet-bai-fb) ← depends on B
+   Task D: create image (tao-anh) ← depends on B
+   Task E: make video (lam-video) ← depends on B
+   Task F: approve final package (manager) ← depends on C, D, E
+   Task G: publish Fanpage/Reels (manager) ← depends on F
+3. A → DONE → Manager sends 3 ideas to Telegram
+4. User approves one idea → B DONE → C/D/E unblock together with 5-minute deadline
+5. C/D/E run in parallel and update progress_percent
+6. Any output finished first is sent to Telegram immediately
+7. All 3 outputs delivered → Manager asks final approval
+8. User approves final package → Manager publishes to Fanpage/Reels
+9. Publish links sent to Telegram → workflow complete
 ```
 
 ---

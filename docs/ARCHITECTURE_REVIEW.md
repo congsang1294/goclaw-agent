@@ -289,7 +289,7 @@ routes:
                                  │
 ┌────────────────────────────────▼─────────────────────────────────────┐
 │                     MANAGER (Gà Trống Tre)                            │
-│  (Claude Code reads core/*.md for instructions)                      │
+│  (GoClaw agent runtime reads core/*.md for instructions)             │
 │                                                                       │
 │  ┌──────────────────┐     ┌────────────┐     ┌───────────────────┐  │
 │  │ INTENT_ANALYZER  │────▶│  PLANNER   │────▶│  TASK_CREATOR     │  │
@@ -590,7 +590,7 @@ skills/<skill-name>/
 
 | Quyết định | Lý do |
 |-----------|-------|
-| **Core framework = markdown instructions**, không phải code | GoClaw runtime là Go binary, repo này chỉ chứa config. Framework là conventions + instructions cho Claude Code. |
+| **Core framework = markdown instructions**, không phải code | GoClaw runtime là Go binary, repo này chỉ chứa config. Framework là conventions + instructions cho GoClaw agent runtime. |
 | **Không viết lại GoClaw features** | Tận dụng: Telegram, skill execution, context loading, multi-agent dispatch |
 | **Task dùng file-based storage** | Không cần database; dễ backup; có thể migrate sau |
 | **Routing = YAML config** | Config-driven, không hardcode, dễ mở rộng |

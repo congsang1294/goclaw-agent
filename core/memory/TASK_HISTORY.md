@@ -46,9 +46,14 @@ Ghi mỗi event quan trọng trong vòng đời task. 1 event = 1 dòng JSON.
 {"event":"PLAN","timestamp":"2026-07-09T10:00:01+07:00","plan_id":"plan_20260709_001","plan_type":"simple","task_count":1}
 {"event":"DISPATCH","timestamp":"2026-07-09T10:00:02+07:00","task_id":"task_20260709_001","worker":"viet-bai-fb","skill":"viet-bai-facebook","attempt":1}
 {"event":"WORKER_START","timestamp":"2026-07-09T10:00:05+07:00","task_id":"task_20260709_001","worker":"viet-bai-fb"}
+{"event":"WORKER_PROGRESS","timestamp":"2026-07-09T10:00:15+07:00","task_id":"task_20260709_001","worker":"viet-bai-fb","progress_percent":60,"progress_note":"đang chọn lọc 3 ý tưởng"}
 {"event":"WORKER_FINISH","timestamp":"2026-07-09T10:00:30+07:00","task_id":"task_20260709_001","worker":"viet-bai-fb","status":"done","duration_ms":25000}
 {"event":"RETRY","timestamp":"2026-07-09T10:01:00+07:00","task_id":"task_20260709_001","attempt":2,"max_retries":3,"error":"API timeout"}
-{"event":"DONE","timestamp":"2026-07-09T10:02:00+07:00","plan_id":"plan_20260709_001","task_count":1}
+{"event":"DELIVERED","timestamp":"2026-07-09T10:01:59+07:00","plan_id":"plan_20260709_001","sent":["caption"],"telegram_message_ids":["12345"]}
+{"event":"APPROVAL_PENDING","timestamp":"2026-07-09T10:02:10+07:00","plan_id":"plan_20260709_001","stage":"final"}
+{"event":"APPROVED","timestamp":"2026-07-09T10:03:00+07:00","plan_id":"plan_20260709_001","stage":"final","approved_by":"6880126421"}
+{"event":"PUBLISHED","timestamp":"2026-07-09T10:03:30+07:00","plan_id":"plan_20260709_001","facebook_urls":["https://facebook.com/..."]}
+{"event":"DONE","timestamp":"2026-07-09T10:03:35+07:00","plan_id":"plan_20260709_001","task_count":1}
 {"event":"FAIL","timestamp":"2026-07-09T10:03:00+07:00","task_id":"task_20260709_002","worker":"tao-anh","error":"OpenAI API: rate limit","attempts":3}
 {"event":"CANCEL","timestamp":"2026-07-09T10:04:00+07:00","task_id":"task_20260709_002","reason":"user cancelled"}
 {"event":"RESPOND","timestamp":"2026-07-09T10:05:00+07:00","message_length":450}
@@ -62,9 +67,14 @@ Ghi mỗi event quan trọng trong vòng đời task. 1 event = 1 dòng JSON.
 | `PLAN` | Tạo plan | plan_id, plan_type, task_count |
 | `DISPATCH` | Gửi task đến worker | task_id, worker, skill, attempt |
 | `WORKER_START` | Worker xác nhận | task_id, worker |
+| `WORKER_PROGRESS` | Worker cập nhật tiến độ | task_id, worker, progress_percent, progress_note |
 | `WORKER_FINISH` | Worker trả kết quả | task_id, worker, status, duration_ms |
 | `RETRY` | Retry task | task_id, attempt, max_retries, error |
-| `DONE` | All tasks complete | plan_id, task_count |
+| `DELIVERED` | Đã gửi đủ artifact về Telegram | plan_id, sent, telegram_message_ids |
+| `APPROVAL_PENDING` | Chờ anh Sáng duyệt | plan_id, stage |
+| `APPROVED` | Anh Sáng đã duyệt | plan_id, stage, approved_by |
+| `PUBLISHED` | Đã đăng Fanpage/Reels | plan_id, facebook_urls |
+| `DONE` | All tasks complete, delivery đủ, và publish xong nếu có | plan_id, task_count |
 | `FAIL` | Task hết retry | task_id, worker, error, attempts |
 | `CANCEL` | Task bị hủy | task_id, reason |
 | `RESPOND` | Gửi response | message_length |
@@ -129,6 +139,10 @@ Ghi mỗi event quan trọng trong vòng đời task. 1 event = 1 dòng JSON.
 | When | Entry Type | Notes |
 |------|-----------|-------|
 | Task completed → done | `task` | Ghi sau khi worker trả output |
+| Worker progress | `event:WORKER_PROGRESS` | Ghi khi worker báo phần trăm tiến độ |
+| Result delivered | `event:DELIVERED` | Ghi sau khi Telegram nhận đủ caption/ảnh/video |
+| Approval pending/approved | `event:APPROVAL_PENDING` / `event:APPROVED` | Ghi khi chờ duyệt và khi anh Sáng duyệt |
+| Published | `event:PUBLISHED` | Ghi sau khi đăng Fanpage/Reels thành công |
 | Task failed (hết retry) | `task` | Ghi kèm error message |
 | Task cancelled | `task` | Ghi kèm lý do |
 | Session end | `session_summary` | Ghi 1 entry tổng kết |

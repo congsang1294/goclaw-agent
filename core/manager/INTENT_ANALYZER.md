@@ -76,7 +76,7 @@ intents:
     plan_type: multi_step  # cần planner vì có thể gồm write + image
 
   team_sync:
-    keywords: ["cả team", "đồng bộ", "chia việc", "làm đồng loạt", "bảo team làm", "làm content cho"]
+    keywords: ["cả team", "đồng bộ", "chia việc", "làm đồng loạt", "bảo team làm", "làm content cho", "làm bài về", "làm bài cho"]
     description: "Sản xuất nội dung đồng bộ — bài viết + ảnh + video"
     plan_type: complex     # full team orchestration
 
@@ -160,7 +160,8 @@ Khi message match **nhiều intents**, áp dụng compound rules:
 
 | Tình huống | Cách xử lý |
 |-----------|-------------|
-| User gửi "ok" giữa flow | → `approve` — xác nhận kết quả đang chờ duyệt |
+| User gửi "ok" giữa flow ideas | → `approve` stage=`ideas` — lưu ý tưởng đã chọn, mở task bài/ảnh/video |
+| User gửi "ok đăng" sau khi đủ bộ | → `approve` stage=`final` — mở task publish Fanpage/Reels |
 | User gửi "viết bài + tạo ảnh" | → `team_sync` — cả hai |
 | User gửi "làm video Reels" | → `create_video` — specific nhất |
 | User gửi "cho 3 ý tưởng" | → `create_ideas` |

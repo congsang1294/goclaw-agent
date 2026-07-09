@@ -9,7 +9,7 @@
 
 ## ⚠️ IMPORTANT: Framework = Markdown Instructions, Not Code
 
-Repo này là GoClaw config. Framework core là **file markdown hướng dẫn** cho Claude Code đọc và làm theo, không phải code runtime. 
+Repo này là GoClaw config. Framework core là **file markdown hướng dẫn** cho GoClaw agent runtime đọc và làm theo, không phải một remote AI điều phối riêng.
 
 **Nguyên tắc:**
 - Nếu GoClaw đã có → DÙNG, không viết lại
@@ -41,7 +41,7 @@ Repo này là GoClaw config. Framework core là **file markdown hướng dẫn**
 
 **Files Created (13 files):**
 - [x] `ARCHITECT.md` — System architecture document
-- [x] `CLAUDE.md` — Rule book for Claude Code
+- [x] `CLAUDE.md` — Local authoring guide for this repo
 - [x] `docs/SYSTEM_ARCHITECTURE.md` — Architecture deep-dive
 - [x] `docs/AGENT_MAP.md` — Agent inventory and details
 - [x] `docs/SKILL_MAP.md` — Skill definitions and dependencies
@@ -78,7 +78,7 @@ Repo này là GoClaw config. Framework core là **file markdown hướng dẫn**
 ## Phase 1: Core Framework
 
 **Goal:** Tạo core/ directory với các file markdown instruction cho Manager (Gà Trống Tre).
-Framework = hướng dẫn Claude Code đọc và làm theo. KHÔNG phải code runtime.
+Framework = hướng dẫn GoClaw agent runtime đọc và làm theo. KHÔNG phải một service runtime riêng.
 
 **Risk Level:** LOW (tất cả đều là .md files mới, không sửa existing)
 **Duration Estimate:** 3-4 sessions

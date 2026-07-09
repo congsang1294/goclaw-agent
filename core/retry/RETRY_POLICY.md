@@ -95,7 +95,7 @@ jitter: true
 | 4 (third retry) | ~20s | initial_delay × 2^(attempt-2) + jitter |
 
 **Jitter:** ±1s ngẫu nhiên để tránh thundering herd.
-**Lưu ý:** Vì Claude Code xử lý turn-by-turn, delay là số turn chờ trước khi retry, không phải thời gian thực.
+**Lưu ý:** Vì GoClaw agent runtime xử lý turn-by-turn, delay là số turn chờ trước khi retry, không phải thời gian thực.
 - 5s delay ≈ 1 turn (turn tiếp theo)
 - 10s delay ≈ 2 turns
 - 20s delay ≈ 3-4 turns

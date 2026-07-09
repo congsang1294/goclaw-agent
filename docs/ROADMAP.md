@@ -63,7 +63,7 @@ Phase 5: ───────────────────────�
 - Framework = markdown instructions + conventions (not code)
 - Tận dụng GoClaw tối đa (Telegram, context, skill execution, multi-agent dispatch)
 - Chỉ APPEND sections vào file hiện có, không sửa existing
-- core/*.md files là hướng dẫn cho Claude Code đọc và làm theo
+- core/*.md files là hướng dẫn cho GoClaw agent runtime đọc và làm theo
 
 ---
 

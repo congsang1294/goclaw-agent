@@ -151,11 +151,21 @@ Khi hoàn thành, trả output theo format:
 
 {
   "status": "done",
+  "progress_percent": 100,
   "output": {
+    "campaign_id": "campaign_...",
+    "stage": "ideas|caption|image|video",
     "caption": "nội dung bài viết hoàn chỉnh...",
     "ideas": null,
     "type": "full_caption"
   }
+}
+
+Khi đang làm:
+{
+  "status": "in_progress",
+  "progress_percent": 40,
+  "progress_note": "đang viết nháp"
 }
 
 Khi lỗi:
@@ -164,7 +174,10 @@ Khi lỗi:
   "error": "mô tả lỗi cụ thể"
 }
 
-LUÔN đặt [done] hoặc [failed] ở đầu câu trả lời.
+Đặt marker ở đầu câu trả lời:
+- `[done]` chỉ khi output JSON có đủ artifact bắt buộc của skill.
+- `[in_progress]` khi đang xử lý, thiếu thông tin, hoặc artifact chưa sẵn sàng để gửi Telegram. Bắt buộc kèm progress_percent và progress_note.
+- `[failed]` khi lỗi kỹ thuật không thể tiếp tục.
 ```
 
 ---
@@ -202,7 +215,7 @@ Product: Tool chuyển keyword Broad/Phrase/Exact. Free 3 lượt. Pro 15,000đ.
 
 --- CONSTRAINTS ---
 Không tạo ảnh. Không hứa kết quả. Không dìm đối thủ.
-Thiếu thông tin → hỏi 1 câu, không suy diễn.
+Thiếu thông tin hoặc artifact chưa sẵn sàng → dùng [in_progress], hỏi 1 câu nếu cần, không suy diễn.
 
 --- OUTPUT FORMAT ---
 {"status":"done","output":{"caption":"...","type":"full_caption"}}

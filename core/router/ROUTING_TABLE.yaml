@@ -65,6 +65,7 @@ routes:
     worker: manager
     skill: orchestration
     timeout: 900s
+    sla_after_idea_approval: 300s
     plan_type: complex
 
   - id: create_ad
@@ -120,5 +121,6 @@ routes:
 
 - **Worker = `manager`** nghĩa là route này không gửi đến worker khác, mà Manager tự xử lý
 - **Timeout** là thời gian tối đa trước khi coi là failed
+- **SLA 5 phút** trong `team_sync` là deadline báo tiến độ/trễ sau khi anh Sáng duyệt ý tưởng; không đồng nghĩa phải kill task ngay nếu video đang render nhưng phải báo anh Sáng worker nào đang bao nhiêu %
 - **Plan type** cho Manager biết có cần Planner không, hay chỉ dispatch đơn giản
 - **Thêm route mới:** chỉ cần thêm 1 entry trong file này + đảm bảo worker và skill tồn tại

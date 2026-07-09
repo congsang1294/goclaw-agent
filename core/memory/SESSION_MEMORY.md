@@ -38,12 +38,24 @@ Session memory giúp Manager resume công việc nếu bị gián đoạn.
       "id": "task_20260709_001",
       "type": "skill_execution",
       "status": "done",
+      "campaign_id": "campaign_20260709_001",
+      "stage": "caption",
       "priority": "normal",
       "worker": "viet-bai-fb",
       "skill": "viet-bai-facebook",
       "input": { "topic": "giới thiệu tool" },
       "output": { "caption": "..." },
       "error": null,
+      "delivery": {
+        "status": "sent",
+        "required": ["caption"],
+        "sent": ["caption"],
+        "telegram_message_id": "12345",
+        "delivered_at": "2026-07-09T08:02:35+07:00",
+        "error": null
+      },
+      "progress_percent": 100,
+      "progress_note": "đã trả text bài viết",
       "attempts": 1,
       "max_retries": 3,
       "parent_task": null,
@@ -51,6 +63,7 @@ Session memory giúp Manager resume công việc nếu bị gián đoạn.
       "created_at": "2026-07-09T08:01:00+07:00",
       "updated_at": "2026-07-09T08:02:30+07:00",
       "assigned_at": "2026-07-09T08:01:00+07:00",
+      "deadline_at": "2026-07-09T08:06:00+07:00",
       "completed_at": "2026-07-09T08:02:30+07:00"
     }
   ]
@@ -86,7 +99,9 @@ PROCESS (theo ORCHESTRATION.md flow)
   │
   ├── Task created → Kanban CREATE → tasks.push(task)
   ├── Task dispatched → UPDATE status + assigned_at
-  ├── Task completed → UPDATE status + output + completed_at
+  ├── Worker progress → UPDATE progress_percent + progress_note
+  ├── Task completed → UPDATE status + output + completed_at + delivery.status=ready + progress_percent=100
+  ├── Result delivered → UPDATE delivery.sent + delivered_at
   ├── Task failed → UPDATE status + error
   ├── Task unblocked → UPDATE status: blocked → todo
   │
@@ -139,7 +154,7 @@ else:
 ### UPDATE — Change Task Status
 ```
 1. Find task by id in tasks array
-2. Update fields: status, updated_at, (output|error), assigned_at/completed_at
+2. Update fields: status, updated_at, (output|error), assigned_at/completed_at, delivery, progress_percent, progress_note, deadline_at
 3. Save file
 ```
 

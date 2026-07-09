@@ -48,10 +48,12 @@ workers:
       - viet-bai-facebook
     dispatch_to: "@viet-bai-fb in group chat"
     input_format: |
-      Topic + brief (product, audience, pain point, benefit, CTA)
+      campaign_id + stage (ideas|caption) + topic + brief + chosen_idea when available
     output_format: |
-      3 ideas OR full caption (Hook + Body + CTA)
+      3 ideas first, then full caption after idea approval. Required for done: campaign_id + stage + ideas/caption + progress_percent=100.
     timeout: 120
+    progress_required: true
+    sla_after_idea_approval: 300
     restrictions:
       - "❌ Không tạo ảnh"
       - "❌ Không làm video"
@@ -73,10 +75,12 @@ workers:
       - viet-bai-facebook   # read-only: để hiểu brand voice
     dispatch_to: "@tao-anh in group chat"
     input_format: |
-      Caption + concept (image direction, style reference)
+      campaign_id + stage=image + chosen_idea + topic + optional caption/concept
     output_format: |
-      Paired image + caption (image URL + paired text)
+      Paired image + caption. Required for done: campaign_id + stage=image + caption_paired plus image_url or image_local + progress_percent=100.
     timeout: 300
+    progress_required: true
+    sla_after_idea_approval: 300
     restrictions:
       - "❌ Không tự viết caption"
       - "❌ Không làm video"
@@ -97,10 +101,12 @@ workers:
       - tao-video-ai
     dispatch_to: "@lam-video in group chat"
     input_format: |
-      Topic + caption + images (concept, paired caption, reference images)
+      campaign_id + stage=video + chosen_idea + topic + optional caption/images
     output_format: |
-      MP4 video (15-25s, 9:16 portrait)
+      MP4 video (15-25s, 9:16 portrait). Required for done: campaign_id + stage=video + video_preview or video_url + progress_percent=100.
     timeout: 600
+    progress_required: true
+    sla_after_idea_approval: 300
     restrictions:
       - "❌ Không tự viết content"
       - "❌ Không tạo ảnh"

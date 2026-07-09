@@ -12,7 +12,7 @@
 |---|------|-----------|--------|------------|------------|
 | R1 | Breaking existing Telegram flow | Low | Critical | **High** | Never modify existing agent/*.md flow rules; only add |
 | R2 | Breaking existing Skill execution | Low | Critical | **High** | Never modify existing SKILL.md steps/triggers; only append |
-| R3 | GoClaw compatibility issue | Low | High | **Medium** | Keep goclaw.yml untouched; new core/ files are Claude Code reference only |
+| R3 | GoClaw compatibility issue | Low | High | **Medium** | Keep goclaw.yml untouched; new core/ files are GoClaw agent runtime reference only |
 | R4 | Framework over-engineering | Medium | Low | **Low** | YAGNI principle — implement only what's needed now |
 | R5 | Config drift (goclaw-agent vs google-ads-toolkit) | High | Medium | **Medium** | Keep goclaw-agent as single source of truth |
 | R6 | Incomplete routing (missed intent) | Medium | Medium | **Medium** | Default fallback route; test all known intents |

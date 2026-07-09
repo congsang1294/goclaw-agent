@@ -69,38 +69,78 @@ Planner nhận intent từ `INTENT_ANALYZER.md` và tạo ra **một hoặc nhi�
 
 Áp dụng cho: `create_ad` (nếu cần cả caption + ảnh).
 
-### 2.3 Complex Plan — Team Sync (3 Workers)
+### 2.3 Complex Plan — Team Sync (Ideas → Parallel Production → Publish)
 
 ```json
 {
   "plan_type": "complex",
+  "campaign_id": "campaign_20260709_001",
+  "deadline_minutes": 5,
   "tasks": [
     {
       "id": "task_001",
       "worker": "viet-bai-fb",
       "skill": "viet-bai-facebook",
-      "input": { "topic": "..." },
+      "input": { "topic": "...", "stage": "ideas", "required_ideas": 3 },
       "depends_on": []
     },
     {
       "id": "task_002",
-      "worker": "tao-anh",
-      "skill": "sang-tao-creative-fb",
-      "input": { "use_output_from": "task_001" },
+      "type": "approval",
+      "worker": "manager",
+      "skill": null,
+      "input": { "stage": "ideas", "wait_for": "task_001" },
       "depends_on": ["task_001"]
     },
     {
       "id": "task_003",
+      "worker": "viet-bai-fb",
+      "skill": "viet-bai-facebook",
+      "input": { "stage": "caption", "use_chosen_idea_from": "task_002" },
+      "depends_on": ["task_002"]
+    },
+    {
+      "id": "task_004",
+      "worker": "tao-anh",
+      "skill": "sang-tao-creative-fb",
+      "input": { "stage": "image", "use_chosen_idea_from": "task_002" },
+      "depends_on": ["task_002"]
+    },
+    {
+      "id": "task_005",
       "worker": "lam-video",
       "skill": "tao-video-ai",
-      "input": { "use_output_from": ["task_001", "task_002"] },
+      "input": { "stage": "video", "use_chosen_idea_from": "task_002" },
       "depends_on": ["task_002"]
+    },
+    {
+      "id": "task_006",
+      "type": "approval",
+      "worker": "manager",
+      "skill": null,
+      "input": { "stage": "final", "wait_for": ["task_003", "task_004", "task_005"] },
+      "depends_on": ["task_003", "task_004", "task_005"]
+    },
+    {
+      "id": "task_007",
+      "type": "publish",
+      "worker": "manager",
+      "skill": "facebook_publish",
+      "input": { "stage": "publish_fanpage", "use_approved_outputs_from": "task_006" },
+      "depends_on": ["task_006"]
     }
   ]
 }
 ```
 
 Áp dụng cho: `team_sync` (yêu cầu đồng bộ cả team).
+
+Quy tắc:
+- Task `ideas` phải chạy trước và trả đúng 3 ý tưởng.
+- Chỉ sau khi anh Sáng duyệt 1 ý tưởng thì mới unblock song song `caption`, `image`, `video`.
+- Ba task `caption`, `image`, `video` dùng chung `campaign_id`, `chosen_idea`, topic, key message và deadline 5 phút.
+- Output nào xong trước thì Manager gửi ngay cho anh Sáng và cập nhật Kanban.
+- `publish` chỉ chạy sau khi anh Sáng duyệt bộ cuối.
 
 ---
 
@@ -144,13 +184,31 @@ plan_templates:
     tasks:
       - worker: viet-bai-fb
         skill: viet-bai-facebook
+        stage: ideas
         input_from_user: true
+      - worker: manager
+        type: approval
+        stage: ideas
       - worker: tao-anh
         skill: sang-tao-creative-fb
-        depends_on_previous: true
+        stage: image
+        depends_on_ideas_approval: true
       - worker: lam-video
         skill: tao-video-ai
-        depends_on_previous: true
+        stage: video
+        depends_on_ideas_approval: true
+      - worker: viet-bai-fb
+        skill: viet-bai-facebook
+        stage: caption
+        depends_on_ideas_approval: true
+      - worker: manager
+        type: approval
+        stage: final
+        depends_on_outputs: [caption, image, video]
+      - worker: manager
+        type: publish
+        stage: publish_fanpage
+        depends_on_final_approval: true
 ```
 
 ---

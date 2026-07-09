@@ -12,7 +12,7 @@
 Orchestration file này là **runtime executable** — Manager (Gà Trống Tre) đọc và làm theo **từng bước trên mỗi turn**.
 Không phải tài liệu tham khảo. Đây là "main loop" của framework.
 
-**Cơ chế hoạt động:** Mỗi lần Claude Code nhận tin nhắn Telegram → chạy flow này từ đầu.
+**Cơ chế hoạt động:** Mỗi lần GoClaw agent runtime nhận tin nhắn Telegram → chạy flow này từ đầu.
 Session file (`memory/sessions/session_YYYY-MM-DD.json`) lưu trạng thái Kanban để resume.
 
 ---
@@ -51,6 +51,11 @@ STEP 3: CREATE PLAN
   → Dùng intent → sinh 1 hoặc nhiều tasks
   → Mỗi task theo TASK_SCHEMA.md
   → Ghi tasks vào Kanban (STEP 7)
+  Với `team_sync`:
+    → Tạo `campaign_id`
+    → Tạo task ideas đầu tiên cho `viet-bai-fb`
+    → Tạo sẵn các task content/image/video/final_approval/publish_fanpage ở trạng thái BLOCKED
+    → Set deadline 5 phút cho các task content/image/video sau khi ideas được duyệt
 
 STEP 4: DISPATCH
   Đọc core/dispatcher/DISPATCHER.md
@@ -64,21 +69,56 @@ STEP 4: DISPATCH
 STEP 5: PROCESS WORKER REPLY
   Đọc reply từ worker (tin nhắn group chat)
   → Parse status ở đầu câu: [done] | [failed] | [in_progress]
-  → Nếu [done] → parse output JSON → update Kanban: task → DONE
+  → Nếu [in_progress] → parse progress_percent/progress_note → update Kanban, log WORKER_PROGRESS
+  → Nếu [done] → parse output JSON → validate artifact bắt buộc → nếu hợp lệ mới update Kanban: task → DONE
   → Nếu [failed] → parse error → update Kanban: task → FAILED
-  → Nếu [in_progress] → chờ (TURN END)
+  → Nếu task ideas DONE → gửi 3 ý tưởng cho anh Sáng và tạo/chuyển approval ý tưởng sang IN_PROGRESS
+  → Nếu task content/image/video DONE → gửi artifact đó ngay cho anh Sáng, cập nhật delivery.sent
+  → Nếu task publish_fanpage DONE → gửi link Fanpage/Reels về Telegram và log DONE
 
 STEP 5a: UNLOCK DEPENDENCIES
   Nếu task vừa DONE:
     → Duyệt Kanban tìm task BLOCKED depends_on task này
     → Unblock: BLOCKED → TODO
     → Save session
+  Riêng team_sync:
+    → Không unblock content/image/video chỉ vì ideas task done
+    → Chỉ unblock content/image/video khi anh Sáng đã approve một `chosen_idea`
+    → Sau khi đủ content + image + video delivered, unblock final_approval
+    → Sau khi final_approval done, unblock publish_fanpage
 
 STEP 5b: CHECK ALL DONE
-  Nếu tất cả tasks trong plan đều DONE:
+  Nếu output content/image/video nào vừa DONE:
+    → Đọc RESPONSE_BUILDER.md → gửi output đó ngay cho anh Sáng
+    → Không chờ đủ bộ mới gửi
+  Nếu đủ content + image + video đều DONE và delivered:
     → Đọc RESULT_AGGREGATOR.md → gom kết quả
-    → Đọc RESPONSE_BUILDER.md → format → gửi Telegram
+    → Đọc RESPONSE_BUILDER.md → format bản tổng hợp cuối
+    → Hỏi anh Sáng duyệt đăng
+    → Log APPROVAL_PENDING stage=final
   Nếu có task FAILED → xử lý retry (STEP 6)
+
+STEP 5c: DELIVER RESULT TO TELEGRAM
+  Chỉ chạy khi worker outputs đã hợp lệ và aggregator đã có đủ artifact bắt buộc.
+  → Gửi caption/text trước nếu có
+  → Gửi ảnh bằng file local nếu có; nếu không có file thì gửi image_url
+  → Gửi video_preview/video_url nếu có
+  → Sau mỗi lần gửi thành công: cập nhật task.delivery.sent
+  → Khi artifact nào gửi thành công: task.delivery.status = "sent", delivered_at = now
+  → Chỉ log DONE cho workflow sau khi đã publish hoặc sau khi workflow không có bước publish
+  → Nếu gửi Telegram lỗi: task.delivery.status = "failed", lưu error, KHÔNG báo complete
+
+STEP 5d: APPROVAL + PUBLISH
+  Khi anh Sáng approve ideas:
+    → Lưu chosen_idea vào session
+    → Set approval ideas task DONE
+    → Unblock content/image/video song song
+    → Dispatch task TODO kế tiếp theo Dispatcher
+  Khi anh Sáng approve final:
+    → Set final_approval DONE
+    → Unblock publish_fanpage
+    → Gọi skill/script đăng Fanpage/Reels bằng artifact đã duyệt
+    → Publish xong: log PUBLISHED, gửi link về Telegram, workflow DONE
 
 STEP 6: RETRY
   Đọc core/retry/RETRY_POLICY.md
@@ -191,12 +231,17 @@ Format: **mỗi dòng là 1 JSON object**, append vào cuối file.
 | `PLAN` | Tạo plan | `{ event, timestamp, plan_id, plan_type, task_count }` |
 | `DISPATCH` | Gửi task đến worker | `{ event, timestamp, task_id, worker, skill, attempt }` |
 | `WORKER_START` | Worker xác nhận nhận task | `{ event, timestamp, task_id, worker }` |
+| `WORKER_PROGRESS` | Worker cập nhật tiến độ | `{ event, timestamp, task_id, worker, progress_percent, progress_note }` |
 | `WORKER_FINISH` | Worker trả kết quả | `{ event, timestamp, task_id, worker, status, duration_ms }` |
 | `RETRY` | Retry task | `{ event, timestamp, task_id, attempt, max_retries, error }` |
-| `DONE` | Tất cả tasks hoàn thành | `{ event, timestamp, plan_id, task_count }` |
+| `DONE` | Tất cả tasks hoàn thành, đã gửi đủ artifact, và đã publish nếu có bước đăng | `{ event, timestamp, plan_id, task_count }` |
 | `FAIL` | Task failed hết retry | `{ event, timestamp, task_id, worker, error, attempts }` |
 | `CANCEL` | Task bị hủy | `{ event, timestamp, task_id, reason }` |
 | `RESPOND` | Gửi response cho user | `{ event, timestamp, message_length }` |
+| `DELIVERED` | Gửi đủ artifact về Telegram | `{ event, timestamp, plan_id, sent, telegram_message_ids }` |
+| `APPROVAL_PENDING` | Chờ anh Sáng duyệt | `{ event, timestamp, plan_id, stage }` |
+| `APPROVED` | Anh Sáng đã duyệt | `{ event, timestamp, plan_id, stage, approved_by }` |
+| `PUBLISHED` | Đã đăng Fanpage/Reels | `{ event, timestamp, plan_id, facebook_urls }` |
 
 ### 5.3 Log Example
 
@@ -206,8 +251,9 @@ Format: **mỗi dòng là 1 JSON object**, append vào cuối file.
 {"event":"DISPATCH","timestamp":"2026-07-09T10:00:02+07:00","task_id":"task_20260709_001","worker":"viet-bai-fb","skill":"viet-bai-facebook","attempt":1}
 {"event":"WORKER_START","timestamp":"2026-07-09T10:00:05+07:00","task_id":"task_20260709_001","worker":"viet-bai-fb"}
 {"event":"WORKER_FINISH","timestamp":"2026-07-09T10:00:30+07:00","task_id":"task_20260709_001","worker":"viet-bai-fb","status":"done","duration_ms":25000}
-{"event":"DONE","timestamp":"2026-07-09T10:00:31+07:00","plan_id":"plan_20260709_001","task_count":1}
-{"event":"RESPOND","timestamp":"2026-07-09T10:00:32+07:00","message_length":450}
+{"event":"DELIVERED","timestamp":"2026-07-09T10:00:31+07:00","plan_id":"plan_20260709_001","sent":["caption"],"telegram_message_ids":["12345"]}
+{"event":"DONE","timestamp":"2026-07-09T10:00:32+07:00","plan_id":"plan_20260709_001","task_count":1}
+{"event":"RESPOND","timestamp":"2026-07-09T10:00:33+07:00","message_length":450}
 ```
 
 ### 5.4 Append Log
@@ -226,9 +272,10 @@ Luôn dùng append, không ghi đè. Mỗi dòng một JSON object.
 
 ```
 1. Intent = approve
-2. Kiểm tra Kanban có task IN_PROGRESS hoặc chờ duyệt không
-3. Nếu có → cho phép worker tiếp tục
-4. Nếu không → "không có gì để duyệt"
+2. Kiểm tra approval task đang in_progress:
+   a. stage = "ideas" → parse số ý tưởng anh chọn, lưu chosen_idea, log APPROVED, unblock content/image/video
+   b. stage = "final" → log APPROVED, unblock publish_fanpage, tự động đăng Fanpage/Reels
+3. Nếu không có approval task → "không có gì để duyệt"
 ```
 
 ### 6.2 Khi user gửi "cancel" (hủy, stop, dừng)
@@ -247,8 +294,13 @@ Luôn dùng append, không ghi đè. Mỗi dòng một JSON object.
 ```
 1. Intent = check_status
 2. Đọc Kanban từ session file
-3. Liệt kê tasks đang active (todo, in_progress, blocked)
-4. Định dạng status_report → gửi user
+3. Liệt kê tasks đang active (todo, in_progress, blocked), kèm worker, progress_percent, progress_note, deadline_at
+4. Định dạng status_report → gửi user:
+   - Cây Bút: đang làm gì, bao nhiêu %
+   - Tạo Ảnh: đang làm gì, bao nhiêu %
+   - Làm Video: đang làm gì, bao nhiêu %
+   - Output nào đã gửi
+   - Còn bao lâu tới deadline 5 phút
 ```
 
 ---
@@ -260,7 +312,10 @@ Luôn dùng append, không ghi đè. Mỗi dòng một JSON object.
 | Task fail lần đầu | RETRY (STEP 6) |
 | Task fail hết lượt retry | Log FAIL + báo user + hủy dependent tasks |
 | Worker không phản hồi | Chờ timeout (theo route config) → fail |
+| Task quá deadline 5 phút | Báo anh Sáng worker nào trễ, progress hiện tại, tiếp tục retry hoặc xin thêm thời gian |
 | Mất kết nối Telegram | Log lỗi, chờ turn sau |
+| Worker báo done nhưng thiếu artifact bắt buộc | Không update DONE; giữ `in_progress`, hỏi worker gửi lại đúng output |
+| Gửi Telegram lỗi hoặc thiếu message id | `delivery.status = failed`; không log DONE, báo lỗi kỹ thuật cho anh Sáng |
 | Input thiếu thông tin | Hỏi user 1 câu, không suy diễn |
 | Session file corrupt | Tạo session mới (backup file cũ) |
 | Worker reply không parse được | Coi là in_progress, chờ reply khác |
@@ -269,7 +324,7 @@ Luôn dùng append, không ghi đè. Mỗi dòng một JSON object.
 
 ## 8. Resume Flow (khi session gián đoạn)
 
-Khi Claude Code khởi động lại (session mới nhưng Kanban còn task active):
+Khi GoClaw agent runtime khởi động lại (session mới nhưng Kanban còn task active):
 
 ```
 1. Đọc session file mới nhất (memory/sessions/)

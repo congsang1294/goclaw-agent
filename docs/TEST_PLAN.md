@@ -34,6 +34,7 @@
 | Task Creator | Simple task → valid schema | Valid task | Manual |
 | Task Creator | Complex task chain → valid deps | Valid dependency graph | Manual |
 | Dispatcher | Task → worker | Worker receives task | Manual |
+| Dispatcher | Worker `[done]` thiếu artifact | Task giữ `in_progress`, yêu cầu gửi lại JSON | Manual |
 | Retry Manager | Failure → retry (up to N) | Retry count respected | Manual |
 | Retry Manager | Max retries → fail | Final failure | Manual |
 | Result Aggregator | Single result → pass through | Correct output | Manual |
@@ -52,9 +53,18 @@
 | F5 | Simple: Answer FAQ | User → Intent → Route → Task → Worker → Done → Response | FAQ answered |
 | F6 | Complex: Write → Image | User → Planner → Task A (write) → Task B (image, dep on A) → Aggregate | Paired output |
 | F7 | Complex: Full campaign | User → Planner → Write → Image → Video → Aggregate | Complete campaign output |
-| F8 | Failure + Retry | Task fails → Retry → Succeeds | Task completes after retry |
-| F9 | Failure + Max retry | Task fails 3x → Fails permanently | Error reported |
-| F10 | Ambiguous intent | Unclear request → 1 clarifying question → Continues | Correct flow |
+| F8 | Team ideas first | User assigns team task → Cây Bút returns 3 ideas → user approves one | No image/video assigned before idea approval |
+| F9 | Parallel production | After idea approval → caption/image/video tasks unblock together | All 3 share campaign_id + chosen_idea |
+| F10 | Progress tracking | Workers send `[in_progress]` with progress_percent | Kanban shows worker + % + note |
+| F11 | Partial output first | Image/video/caption finishes before others | Gà sends that output immediately in Telegram |
+| F12 | 5-minute SLA | After idea approval, wait/check deadline | Gà reports late worker and progress if >5 min |
+| F13 | Final approval publish | All outputs delivered → user approves → publish Fanpage/Reels | Publish only after final approval |
+| F14 | Delivery gate | Worker done → Aggregator ready → Telegram sends caption/image/video | DONE only after delivery đủ |
+| F15 | Missing artifact guard | Worker says `[done]` without image/video URL/file | No DONE log; worker asked to resend |
+| F16 | Telegram delivery fail | Artifact exists but Telegram send fails | delivery failed, no complete message |
+| F17 | Failure + Retry | Task fails → Retry → Succeeds | Task completes after retry |
+| F18 | Failure + Max retry | Task fails 3x → Fails permanently | Error reported |
+| F19 | Ambiguous intent | Unclear request → 1 clarifying question → Continues | Correct flow |
 
 ### 2.3 Smoke Tests (Post-Deploy)
 
@@ -64,6 +74,8 @@
 | S2 | Write post | "viết bài Facebook giới thiệu tool" | Post generated |
 | S3 | Create image | "tạo ảnh quảng cáo" | Image + caption |
 | S4 | Video preview | "làm video" | Preview sent |
+| S4b | Delivery completion | Sau S2-S4 kiểm log | `DELIVERED` xuất hiện trước `DONE` |
+| S4c | Team Telegram flow | "bảo team làm bài về..." → duyệt 1 ý → chờ outputs | 3 ideas first, then partial outputs + progress |
 | S5 | FAQ | "tool này giá bao nhiêu" | FAQ answered |
 | S6 | Heartbeat | Wait for next heartbeat | Signal check (silent if none) |
 
@@ -75,6 +87,7 @@
 | R2 | Cây Bút workflow | @viet-bai-fb in group | Correct response |
 | R3 | Tạo Ảnh workflow | @tao-anh in group | Correct response |
 | R4 | Làm Video workflow | @lam-video in group | Correct response |
+| R4b | Complete gate | Simulate missing media output | Bot không báo complete |
 | R5 | Knowledge lookup | Ask product question | Correct info from knowledge/ |
 | R6 | Brand voice | Any response | Matches SOUL.md tone |
 | R7 | Heartbeat signals | Check order/lead | Correct notification or silence |

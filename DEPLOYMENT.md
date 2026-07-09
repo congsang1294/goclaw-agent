@@ -14,7 +14,7 @@ This document describes how to deploy the Gà Trống Tre AI Team Framework to a
 - **VPS:** Single server with Docker Compose
 - **GoClaw:** Multi-agent AI gateway (Postgres-backed)
 - **Telegram:** Bot API (polling mode)
-- **Framework:** Markdown instructions + YAML config (Claude Code layer)
+- **Framework:** Markdown instructions + YAML config loaded by GoClaw agent runtime
 
 ---
 

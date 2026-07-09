@@ -76,8 +76,9 @@
 3. Task → CREATED → TODO (Kanban)
 4. Dispatcher lấy task → IN_PROGRESS
 5. Worker thực thi skill
-6. Worker báo done → DONE
-7. Manager đọc output → Response
+6. Worker báo done + output đủ artifact → DONE
+7. Manager gửi artifact về Telegram
+8. Telegram delivery đủ → workflow complete
 ```
 
 **Thời gian dự kiến:** 30-120 giây (tùy skill)
@@ -92,12 +93,13 @@
 3. task_A → TODO
    task_B → BLOCKED (chờ task_A)
 4. Dispatcher: task_A → viet-bai-fb → IN_PROGRESS
-5. Cây Bút viết caption xong → task_A → DONE
+5. Cây Bút viết caption xong, output hợp lệ → task_A → DONE
 6. Manager thấy task_A done → unblock task_B
    task_B → TODO
 7. Dispatcher: task_B → tao-anh → IN_PROGRESS
-8. Tạo Ảnh tạo ảnh xong → task_B → DONE
-9. Manager aggregate kết quả → Response
+8. Tạo Ảnh tạo ảnh xong, có file/link ảnh → task_B → DONE
+9. Manager aggregate kết quả → gửi caption + ảnh về Telegram
+10. Chỉ báo complete sau khi Telegram delivery đủ
 ```
 
 ### 3.3 Retry Flow
@@ -109,7 +111,7 @@
 4. Retry Manager: attempts(1) < max_retries(3) → RETRYING
 5. Retry Manager: gửi lại task → TODO
 6. Dispatcher → IN_PROGRESS
-7a. Worker thành công → DONE
+7a. Worker thành công + output đủ artifact → DONE
     HOẶC
 7b. Worker failed 3 lần → FAILED, attempts: 3
     → Retry Manager: max retries → báo Manager
@@ -121,12 +123,20 @@
 ```
 1. Manager nhận "cả team làm bài về sản phẩm X"
 2. Planner:
-   task_A: viet-bai-fb (caption)
-   task_B: tao-anh (image, depends_on: task_A)
-   task_C: lam-video (video, depends_on: task_B)
-3. Dispatch tuần tự: A → B → C
-4. Mỗi bước đều chờ user approval trước khi next step
-   (theo TEAM FLOW trong agent/AGENTS.md)
+   task_A: viet-bai-fb (ideas: 3 ý tưởng)
+   task_B: approval ideas (anh Sáng chọn 1 ý)
+   task_C: viet-bai-fb (caption, depends_on: task_B)
+   task_D: tao-anh (image, depends_on: task_B)
+   task_E: lam-video (video, depends_on: task_B)
+   task_F: approval final (depends_on: C, D, E)
+   task_G: publish_fanpage (depends_on: F)
+3. Dispatch A trước
+4. A DONE → Gà gửi 3 ý tưởng cho anh Sáng duyệt
+5. Anh Sáng duyệt ý → unblock C, D, E và set deadline 5 phút
+6. C/D/E chạy song song. Output nào xong trước thì Gà gửi Telegram trước
+7. Đủ bài viết + ảnh + video → Gà gửi bản tổng hợp cuối xin duyệt đăng
+8. Anh Sáng duyệt final → Gà đăng Fanpage/Reels
+9. Đăng xong mới complete workflow
 ```
 
 ---

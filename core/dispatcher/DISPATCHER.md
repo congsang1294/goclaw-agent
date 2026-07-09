@@ -56,11 +56,16 @@ STEP 5: FORMAT DISPATCH MESSAGE
   
   --- TASK ---
   Input: {task.input}
+  Campaign: {task.campaign_id}
+  Stage: {task.stage}
+  Deadline: {task.deadline_at}
   
   --- OUTPUT FORMAT ---
   {output_format}
   
   Khi hoàn thành, trả lời với [done] hoặc [failed] ở đầu câu.
+  Chỉ được dùng [done] khi output có đủ artifact bắt buộc của skill.
+  Khi đang làm, trả [in_progress] kèm progress_percent và progress_note.
 
 STEP 6: SEND VIA GOCLAW
   Gửi tin nhắn trong group chat:
@@ -90,8 +95,8 @@ Manager parse marker để biết trạng thái.
 
 | Marker | Ý nghĩa | Manager hành động |
 |--------|---------|-------------------|
-| `[in_progress]` | Worker đã nhận, đang xử lý | Log WORKER_START. Chưa cập nhật Kanban (đã in_progress). |
-| `[done]` | Worker hoàn thành | Parse output JSON sau marker. Update Kanban → DONE. Log WORKER_FINISH. |
+| `[in_progress]` | Worker đã nhận, đang xử lý | Parse progress_percent/progress_note. Update Kanban progress. Log WORKER_PROGRESS. |
+| `[done]` | Worker hoàn thành và output đủ artifact bắt buộc | Parse output JSON sau marker. Validate output. Update Kanban → DONE. Log WORKER_FINISH. |
 | `[failed]` | Worker lỗi | Parse error message. Update Kanban → FAILED. Log WORKER_FINISH. |
 
 ### 3.2 Parse Rules
@@ -103,14 +108,18 @@ Manager parse marker để biết trạng thái.
 4. Nếu có [done]:
    a. Tìm JSON object { "status": "done", "output": {...} }
    b. Parse output vào task.output
-   c. Update Kanban: task → DONE
+   c. Validate required artifacts theo mục 3.4
+   d. Nếu thiếu artifact: KHÔNG update DONE; giữ IN_PROGRESS và yêu cầu worker gửi lại output đúng format
+   e. Nếu đủ artifact: Update Kanban: task → DONE, delivery.status = "ready"
 5. Nếu có [failed]:
    a. Tìm error message
    b. Update Kanban: task → FAILED, task.error = error
 6. Nếu [in_progress]:
-   a. Log WORKER_START
-   b. Giữ task IN_PROGRESS
-   c. Chờ turn sau
+   a. Parse progress_percent nếu có
+   b. Parse progress_note hoặc mô tả worker đang làm gì
+   c. Update task.progress_percent, task.progress_note, task.updated_at
+   d. Log WORKER_PROGRESS
+   e. Giữ task IN_PROGRESS và chờ turn sau
 ```
 
 ### 3.3 Output JSON Detection
@@ -122,7 +131,7 @@ Cách tìm:
 1. Tìm { đầu tiên sau [done] marker
 2. Tìm } cuối cùng
 3. Parse JSON ở giữa
-4. Nếu parse fail → log lỗi, coi toàn bộ reply text là output.caption
+4. Nếu parse fail → log lỗi, giữ task IN_PROGRESS và yêu cầu worker gửi lại JSON đúng format
 ```
 
 **Ví dụ worker reply:**
@@ -138,6 +147,51 @@ status = done
 output.caption = "Bạn đang mất bao nhiêu thời gian..."
 output.type = "full_caption"
 ```
+
+### 3.4 Required Artifact Validation
+
+Trước khi đổi task sang `done`, Manager phải kiểm tra output theo skill:
+
+| Skill | Required output để được DONE |
+|-------|------------------------------|
+| `viet-bai-facebook` | `output.caption` hoặc `output.ideas` không rỗng |
+| `sang-tao-creative-fb` | `output.caption_paired` không rỗng và có `output.image_url` hoặc `output.image_local` |
+| `tao-video-ai` | có `output.video_preview` hoặc `output.video_url`; `duration_seconds` và `provider` không rỗng nếu pipeline đã render |
+
+Nếu worker nói "xong" nhưng thiếu field bắt buộc:
+
+```
+Giữ task.status = "in_progress"
+task.error = null
+Gửi lại worker:
+"@{worker_id} task {task_id} chưa đủ output để mark DONE.
+Thiếu: {missing_fields}. Gửi lại [done] kèm JSON đủ artifact giúp Gà."
+```
+
+Không được suy diễn link/file từ text tự do nếu JSON thiếu.
+Không được log `WORKER_FINISH` status `done` khi validation fail.
+
+### 3.5 Progress Parsing
+
+Worker phải đưa progress ở một trong hai dạng:
+
+```json
+{"status":"in_progress","progress_percent":40,"progress_note":"đang dựng prompt ảnh"}
+```
+
+hoặc trong text:
+
+```
+[in_progress] Em đang render video... progress_percent=60
+```
+
+Manager cập nhật Kanban ngay khi thấy progress. Nếu progress tăng từ lần trước, có thể báo ngắn cho anh Sáng:
+
+```
+Tiến độ: Cây Bút 100% xong bài, Tạo Ảnh 70% đang gen ảnh, Làm Video 60% đang render.
+```
+
+Không spam: chỉ báo khi có output xong, khi anh hỏi tiến độ, hoặc khi task có nguy cơ quá deadline 5 phút.
 
 ---
 
@@ -164,6 +218,7 @@ Input: {input}
 
 Khi xong, trả lời [done] kèm output JSON.
 Khi lỗi, trả lời [failed] kèm error message.
+Không dùng [done] nếu chưa có đủ artifact bắt buộc.
 ```
 
 ### 4.2 Worker-Specific Format (mỗi worker có template trong WORKER_REGISTRY.yaml)
@@ -171,29 +226,36 @@ Khi lỗi, trả lời [failed] kèm error message.
 **Cây Bút (viet-bai-fb):**
 ```
 @viet-bai-fb [TASK: task_20260709_001]
-Viết caption Facebook với chủ đề: {topic}
+Stage: ideas hoặc caption
+Campaign: {campaign_id}
+Chủ đề: {topic}
+Ý tưởng đã duyệt: {chosen_idea}
 Tone: brand voice | Format: Hook + Body + CTA
 
-Output: {"status":"done","output":{"caption":"...","type":"full_caption"}}
+Ideas output: {"status":"done","progress_percent":100,"output":{"campaign_id":"...","stage":"ideas","ideas":[...],"type":"ideas"}}
+Caption output: {"status":"done","progress_percent":100,"output":{"campaign_id":"...","stage":"caption","caption":"...","type":"full_caption"}}
 ```
 
 **Tạo Ảnh (tao-anh):**
 ```
 @tao-anh [TASK: task_20260709_002]
-Tạo ảnh creative cho caption: {caption}
+Campaign: {campaign_id}
+Tạo ảnh creative theo ý tưởng đã duyệt: {chosen_idea}
+Caption nếu đã có: {caption}
 Concept: {concept}
 
-Output: {"status":"done","output":{"image_url":"...","caption_paired":"...","mode":"organic"}}
+Output: {"status":"done","progress_percent":100,"output":{"campaign_id":"...","stage":"image","image_url":"...","caption_paired":"...","mode":"organic"}}
 ```
 
 **Làm Video (lam-video):**
 ```
 @lam-video [TASK: task_20260709_003]
-Làm video từ caption + ảnh.
+Campaign: {campaign_id}
+Làm video theo ý tưởng đã duyệt: {chosen_idea}
 Caption: {caption}
 Ảnh: {image_urls}
 
-Output: {"status":"done","output":{"video_url":"...","duration_seconds":18}}
+Output: {"status":"done","progress_percent":100,"output":{"campaign_id":"...","stage":"video","video_url":"...","video_preview":"...","duration_seconds":18,"provider":"openai-ken-burns"}}
 ```
 
 ---
@@ -224,7 +286,8 @@ Output: {"status":"done","output":{"video_url":"...","duration_seconds":18}}
 | Worker không tìm thấy | Log + fail task |
 | Skill không tồn tại | Log + fail task |
 | Worker reply không có marker | Coi là in_progress, chờ |
-| Worker reply không parse được | Log cả raw reply, coi output.text |
+| Worker reply không parse được | Giữ in_progress, yêu cầu worker gửi lại JSON đúng format |
+| Worker `[done]` nhưng thiếu artifact | Giữ in_progress, yêu cầu worker gửi lại field thiếu |
 | Timeout đạt | Kanban: in_progress → failed, error = "timeout" |
 
 ---
