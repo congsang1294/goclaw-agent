@@ -47,14 +47,33 @@ Trigger:
 
 Luồng chuẩn:
 
-1. Gọi `scripts/gen_caption.py --task ideas` để tạo 3 ý tưởng.
-2. Gửi 3 ý tưởng cho anh Sáng qua Bot Gà, mỗi ý gồm tiêu đề + angle ngắn.
+1. Tạo 3 ý tưởng caption (gen bằng LLM, không cần script — agent tự viết theo brand voice).
+2. Gửi 3 ý tưởng cho anh Sáng, mỗi ý gồm tiêu đề + angle ngắn.
 3. Chờ anh Sáng chọn 1 ý.
-4. Gọi `scripts/mode1_create_preview.py --idea "..." --angle "..."` để tạo caption + ảnh + state JSON.
-5. Gửi preview cho anh Sáng: ảnh local + caption đầy đủ.
-6. Chỉ khi anh Sáng OK, gọi `scripts/mode1_post_approved.py --state "..."`.
-7. `mode1_post_approved.py` gọi `post_facebook.py`.
-8. `post_facebook.py` tự publish ảnh local thành URL public rồi post lên Facebook bằng endpoint `/{page-id}/photos`.
+4. **Gọi tool `create_image`** để tạo ảnh từ ý tưởng đã chọn:
+
+```jsonc
+// create_image — built-in GoClaw tool (provider chain: OpenRouter → Gemini → OpenAI)
+{
+  "prompt": "<prompt ảnh theo ý tưởng đã duyệt + brand style>",
+  "aspect_ratio": "1:1"   // hoặc "4:3" cho post Facebook
+}
+// → trả MEDIA:<path>, file lưu workspace/generated/{YYYY-MM-DD}/
+```
+
+5. **Gọi `send_file`** để gửi ảnh preview + caption về Telegram cho anh Sáng duyệt:
+
+```jsonc
+{
+  "path": "workspace/generated/2026-07-10/creative_001.png",
+  "caption": "<caption organic 80-150 từ>"
+}
+```
+
+6. Chờ anh Sáng OK. **Gà** (Manager) đăng lên Fanpage, KHÔNG phải worker.
+
+> **QUAN TRỌNG**: Agent phải có tool `create_image` + `send_file` (profile `full`).
+> Nếu thiếu → ảnh không về Telegram. Fix: `scripts/fix-agent-tools.sh`.
 
 Yêu cầu caption organic:
 
@@ -76,35 +95,48 @@ Trigger:
 
 Luồng chuẩn:
 
-1. Gọi `scripts/gen_caption.py --task ad-bundles`.
-2. Gọi `scripts/gen_image.py --mode ads --quality medium --bundle-file "..."`
-3. Trả đúng 3 bộ creative cho anh Sáng.
-4. Không tự đăng Facebook.
+1. Tạo 3 bộ creative (gen bằng LLM — ad copy 80-150 từ × 3 angle).
+2. **Gọi `create_image` 3 lần** (1 ảnh/bundle):
 
-Mỗi bộ creative ads phải gồm:
+```jsonc
+// Bundle 1: pain angle
+{"prompt": "<pain angle creative>", "aspect_ratio": "1:1"}
+// Bundle 2: solution angle
+{"prompt": "<solution angle creative>", "aspect_ratio": "1:1"}
+// Bundle 3: proof angle
+{"prompt": "<proof angle creative>", "aspect_ratio": "1:1"}
+```
 
-- 1 ảnh ads.
-- 1 ad copy 80-150 từ.
-- Angle rõ ràng: `pain`, `solution`, hoặc `proof`.
+3. **Gọi `send_file` với `attachments`** để gửi cả 3 ảnh + ad copy về Telegram:
 
-Không được tách ảnh và copy thành output rời. Một creative ads hoàn chỉnh là một cặp ảnh + copy.
+```jsonc
+{
+  "attachments": [
+    {"path": "workspace/generated/.../bundle1.png", "caption": "[pain] <ad copy>"},
+    {"path": "workspace/generated/.../bundle2.png", "caption": "[solution] <ad copy>"},
+    {"path": "workspace/generated/.../bundle3.png", "caption": "[proof] <ad copy>"}
+  ]
+}
+```
 
-## Cơ Chế Ảnh Public Cho Facebook
+4. Không tự đăng Facebook. Chờ anh Sáng duyệt → Gà đăng.
 
-Facebook Graph API `/photos` cần ảnh public URL. Vì vậy production flow phù hợp nhất là:
+> **QUAN TRỌNG**: `create_image` + `send_file` cần profile `full`. Fix: `scripts/fix-agent-tools.sh`.
 
-1. GPT Image tạo ảnh local trong `scripts/output/`.
-2. Khi post thật, `post_facebook.py` gọi `publish_image.py`.
-3. `publish_image.py` copy ảnh vào thư mục web tĩnh trên VPS, ví dụ `/opt/my-website/google-ads-toolkit/images/fb-creatives`.
-4. Script trả URL public, ví dụ `https://tool.congsang.info.vn/images/fb-creatives/file.png`.
-5. `post_facebook.py` gửi `url=image_url` và `caption=caption_text` lên `/{page-id}/photos`.
+## Cơ Chế Giao Media Trong GoClaw
 
-Lý do chọn cách này:
+GoClaw dùng **`MEDIA:<path>` token** để giao file giữa tool và Telegram:
 
-- Bot Gà/cron chỉ cần xử lý file local, đơn giản và ít lỗi.
-- Không cần upload ảnh lên dịch vụ thứ ba.
-- Facebook nhận đúng URL public.
-- Dễ dry-run và dễ debug bằng file JSON local.
+1. `create_image` tạo file → lưu `workspace/generated/{date}/` → trả `MEDIA:<path>`.
+2. `send_file` nhận path → Telegram render thành `sendPhoto`/`sendMediaGroup`.
+3. **KHÔNG cần URL public** để preview. Chỉ cần khi **đăng Fanpage** mới cần public URL.
+
+Đăng Fanpage (Gà thực hiện, không phải worker):
+- Gà dùng `workstation_exec` chạy `post_facebook.py` (script trong `skills/tao-video-ai/scripts/`).
+- Script publish ảnh → web tĩnh → URL public → Graph API `/photos`.
+- Hoặc dùng `send_file` với `caption` + path trực tiếp nếu channel hỗ trợ.
+
+> Chi tiết cơ chế: `docs/SKILL_OUTPUT_FIX.md`.
 
 ## Cron/Telegram Flow Gợi Ý
 
@@ -112,12 +144,12 @@ Cron không nên tự đăng khi chưa có duyệt.
 
 Flow an toàn:
 
-- Cron sáng gọi `gen_caption.py --task ideas`, Bot Gà gửi 3 ý tưởng cho anh Sáng.
+- Cron sáng (hoặc Gà) tạo 3 ý tưởng caption bằng LLM, gửi cho anh Sáng qua Telegram.
 - Anh Sáng trả lời chọn ý 1/2/3.
-- Bot Gà gọi `mode1_create_preview.py` để tạo preview ảnh + caption.
-- Bot Gà gửi preview ảnh + caption và giữ lại file state.
+- Gà gọi tool `create_image` để tạo ảnh + `send_file` để gửi preview về Telegram.
+- Gà gửi preview ảnh + caption cho anh Sáng duyệt.
 - Anh Sáng nhắn `OK đăng`.
-- Bot Gà gọi `mode1_post_approved.py --state output/mode1_preview_state.json`.
+- Gà (Manager) dùng `workstation_exec` chạy `post_facebook.py` (script có thật trong tao-video-ai/scripts/) để đăng lên Fanpage.
 
 Nếu muốn auto hoàn toàn sau này, chỉ bật khi:
 
@@ -126,79 +158,66 @@ Nếu muốn auto hoàn toàn sau này, chỉ bật khi:
 - Fanpage token còn quyền `pages_manage_posts`.
 - Anh Sáng đã xác nhận lịch auto-post.
 
-## Lệnh Thường Dùng
+## Lệnh Thường Dùng (GoClaw Built-in Tools)
 
-Tạo 3 ý tưởng:
+> **LƯU Ý:** Các script `gen_caption.py`, `gen_image.py`, `mode1_*.py` **không tồn tại**
+> trong thư mục skill này. Skill giờ dùng GoClaw built-in tools.
 
-```bash
-python3 scripts/gen_caption.py --task ideas --product "Google Ads Match Type Converter"
+**Tạo ảnh creative (trong workspace GoClaw):**
+
+```jsonc
+// Tool call: create_image
+{
+  "prompt": "Google Ads tool screenshot, minimalist, blue theme, professional",
+  "aspect_ratio": "1:1"
+}
+// → file: workspace/generated/2026-07-10/image_xxx.png
 ```
 
-Tạo caption organic cho ý đã chọn:
+**Gửi ảnh + caption về Telegram cho anh Sáng:**
 
-```bash
-python3 scripts/gen_caption.py --task caption --mode organic --idea "Mỗi lần format keyword lại thấy mệt" --output output/caption.json
+```jsonc
+// Tool call: send_file (single)
+{
+  "path": "workspace/generated/2026-07-10/image_xxx.png",
+  "caption": "<caption organic 80-150 từ>"
+}
+
+// Tool call: send_file (batch — 3 creative ads)
+{
+  "attachments": [
+    {"path": "...bundle1.png", "caption": "[pain] ad copy..."},
+    {"path": "...bundle2.png", "caption": "[solution] ad copy..."},
+    {"path": "...bundle3.png", "caption": "[proof] ad copy..."}
+  ]
+}
 ```
 
-Tạo ảnh organic:
+**Gà đăng bài lên Fanpage (sau khi anh Sáng duyệt):**
 
 ```bash
-python3 scripts/gen_image.py --mode organic --quality low --prompt "..."
-```
-
-Tạo preview Mode 1 trong một lệnh cho Bot Gà:
-
-```bash
-python3 scripts/mode1_create_preview.py --idea "Mỗi lần format keyword lại thấy mệt" --angle pain --output output/mode1_preview_state.json
-```
-
-Post bài đã duyệt từ state:
-
-```bash
-python3 scripts/mode1_post_approved.py --state output/mode1_preview_state.json
-```
-
-Đăng bài đã duyệt bằng ảnh local:
-
-```bash
-python3 scripts/post_facebook.py --image output/post.png --caption-file output/caption.json
-```
-
-Đăng bài đã duyệt bằng URL public có sẵn:
-
-```bash
-python3 scripts/post_facebook.py --image-url "https://tool.congsang.info.vn/images/fb-creatives/post.png" --caption-file output/caption.json
+# Qua workstation_exec (workstation ga-trong-tre-docker)
+python3 scripts/post_video.py --image output/creative.png --caption "caption đã duyệt"
+# Hoặc dùng post_facebook.py nếu có
 ```
 
 ## Biến Môi Trường
 
-Credential chỉ được để trong `scripts/.env`. Không hard-code token/key vào code hoặc tài liệu.
+Credential chỉ được để trong `.env` (workspace hoặc VPS env). Không hard-code vào code.
 
-Bắt buộc:
+**GoClaw provider chain** (cấu hình ở agent config, không phải skill):
+- `OPENAI_API_KEY` → provider OpenAI cho `create_image`
+- Provider chain: OpenRouter → Gemini → OpenAI (tự động fallback)
 
-- `OPENAI_API_KEY`
+**Fanpage** (chỉ Gà dùng khi đăng):
 - `FB_PAGE_ID`
 - `FB_PAGE_TOKEN`
 
-Bắt buộc khi post thật bằng ảnh local:
-
-- `PUBLIC_IMAGE_DIR`
-- `PUBLIC_BASE_URL`
-
 Khuyến nghị:
 
-- `PUBLIC_IMAGE_SUBDIR=fb-creatives`
-- `DRY_RUN=true`
+- `DRY_RUN=true` (chỉ preview, không post thật khi chưa duyệt)
 - `GRAPH_API_VERSION=v21.0`
-- `OUTPUT_DIR=output`
-- `BRAND_DB_PATH=/Users/congsang94/Desktop/my-brain/brain.db`
-- `CONTEXT_DIR=/Users/congsang94/Desktop/google-ads-toolkit/context-files`
-
-Kiểm tra môi trường:
-
-```bash
-python3 scripts/check_env.py
-```
+- `PUBLIC_IMAGE_SUBDIR=fb-creatives`
 
 ## Luật An Toàn
 
@@ -221,7 +240,7 @@ Khi skill này chạy trong context của một Task (Worker Tạo Ảnh), Worke
 | Giai đoạn | Status | Khi nào |
 |-----------|--------|---------|
 | Nhận task, bắt đầu gen ý tưởng | `in_progress` | Ngay sau khi nhận task |
-| Đang gen ảnh (OpenAI) | `in_progress` | Chạy gen_image.py |
+| Đang gen ảnh (OpenAI) | `in_progress` | Dùng tool `create_image` |
 | Đang chờ duyệt | `in_progress` | Đã gửi preview, chờ Manager OK |
 | Hoàn thành | `done` | Đã trả ảnh + caption ghép cặp, có file/link ảnh thật |
 | Lỗi OpenAI | `failed` | Retry 1 lần → vẫn fail |

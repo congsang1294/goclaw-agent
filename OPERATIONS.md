@@ -201,6 +201,8 @@ docker logs goclaw-bai-13-postgres-1 --tail 50
 | Telegram not responding | Token invalid | Re-generate token, update channel instance |
 | "No provider" | Provider not enabled | Check `llm_providers` table |
 | Sandbox error | Sandbox misconfig | Set `sandbox.mode=off` in config |
+| `no workstation bound to agent` | Thiếu row trong `agent_workstation_links` (agent chưa được link ws) | `./scripts/bind-workstation.sh` — xem [Workstation Setup](docs/WORKSTATION_SETUP.md) |
+| `binary 'python3' not allowed` | Allowlist workstation thiếu binary skill cần | `./scripts/bind-workstation.sh` (mở allowlist) hoặc `POST /v1/workstations/{id}/permissions` |
 
 ### 6.2 Agent Debug Commands
 

@@ -13,32 +13,48 @@ Khi anh Sáng nhắn `video`, Gà phải tạo video AI và trả preview/file/l
 
 1. Anh Sáng nhắn Telegram: `video` hoặc câu có ý định tạo/đăng video.
 2. Gà dùng `use_skill tao-video-ai`.
-3. Gà chạy đúng lệnh trong workspace hiện tại:
+3. **Gà (hoặc worker Làm Video) gọi tool `create_video`** để tạo MP4 thật:
+
+```jsonc
+// create_video — tool built-in của GoClaw (provider chain: Gemini → MiniMax → OpenRouter)
+{
+  "prompt": "<prompt sinh từ gen-prompt.py hoặc tự viết theo topic>",
+  "duration": 8,            // 4 | 6 | 8 (giây)
+  "aspect_ratio": "9:16"    // dọc cho Reels/TikTok/Shorts
+}
+// → trả về MEDIA:<path>, file lưu workspace/generated/{YYYY-MM-DD}/
+```
+
+> **BẮT BUỘC**: media chỉ về Telegram qua `MEDIA:` token. Để file đến chat,
+> gọi `send_file` sau khi `create_video` xong (xem "Trả video về Telegram" bên dưới).
+> Nếu agent thiếu tool `create_video`/`send_file` → skill KHÔNG trả được preview.
+> Fix: chạy `scripts/fix-agent-tools.sh` (profile `full`).
+
+4. **Pipeline nâng cao (nếu cần voiceover + ghép)** — chỉ khi cần voice, chạy
+   qua workstation_exec (yêu cầu đã `bind-workstation.sh` + allowlist có `python3`, `ffmpeg`):
 
 ```bash
-python3 scripts/video_auto_facebook.py
+# qua tool workstation_exec, KHÔNG phải shell trực tiếp
+python3 scripts/gen-prompt.py     # sinh prompt + voice script
+python3 scripts/gen-video.py      # tạo video_raw.mp4 (provider hợp lệ)
+python3 scripts/gen-voice.py      # tạo voice.mp3
+python3 scripts/build-final.py    # ghép final.mp4
 ```
 
-4. Script tạo file `video-pipeline.trigger` trong workspace với JSON:
+5. **Trả video về Telegram** — gọi `send_file`:
 
-```json
+```jsonc
+// send_file — built-in, render thành Telegram sendVideo
 {
-  "status": "gen",
-  "topic": "Google Ads Match Type Converter - chuyển đổi match type nhanh cho nhà quảng cáo",
-  "caption": "default",
-  "auto_post_facebook": false
+  "path": "workspace/generated/2026-07-10/abc.mp4",
+  "caption": "Preview video nhé anh Sáng. Duyệt rồi em đăng."
 }
+// hoặc dùng attachments: [{path, caption}, ...] để gửi batch
 ```
 
-5. VPS watcher đọc trigger, tự chạy pipeline:
-   - `gen-prompt.py` tạo prompt + voice script.
-   - `gen-video.py` tạo `video_raw.mp4` bằng provider hợp lệ.
-   - `gen-voice.py` tạo `voice.mp3`.
-   - `build-final.py` tạo `final.mp4` và gửi preview video về Telegram.
-   - Không gọi `post_video.py` ở bước preview.
-   - Chờ anh Sáng duyệt rồi mới đăng Facebook Reels.
+> KHÔNG gọi `post_video.py` ở bước preview. Chỉ đăng Reels sau khi anh Sáng duyệt.
 
-6. Sau khi chạy command, Gà chỉ trả lời:
+6. Sau khi gửi preview, Gà trả lời:
 
 `Em đang tạo video preview cho anh Sáng. Xong em gửi video ở Telegram để anh duyệt trước.`
 
@@ -57,20 +73,35 @@ Chỉ dùng 2 provider này:
 
 Không dùng Pollinations. Không dùng HuggingFace. Nếu thiếu key provider nào thì bỏ qua provider đó, không hỏi user.
 
-## Facebook posting
+## Facebook posting (Gà đăng cuối cùng)
 
-- Facebook Page token đã nằm trong env VPS.
-- Uploader dùng `scripts/post_video.py` ở workspace Gà.
-- Đăng bằng Graph API/Reels endpoint.
-- Khi đăng thành công, link có dạng `https://www.facebook.com/reel/...`.
+- Gà là người duy nhất đăng lên Fanpage (Manager role), **sau khi anh Sáng duyệt** bộ cuối.
+- Worker Làm Video **chỉ trả preview về Telegram**, không tự đăng.
+- Gà đăng qua `workstation_exec` chạy `post_video.py` (Graph API Reels endpoint):
+
+```bash
+# Gà gọi workstation_exec (workstation ga-trong-tre-docker, allowlist có python3)
+python3 scripts/post_video.py --video output/final.mp4 --caption "<caption đã duyệt>"
+```
+
+- Facebook Page token nằm trong env VPS (`FB_PAGE_ID`, `FB_PAGE_TOKEN`).
+- Khi đăng thành công, `post_video.py` trả link dạng `https://www.facebook.com/reel/...`.
+- Gà phải gửi link đó về Telegram cho anh Sáng ngay.
 
 ## Lệnh bắt buộc
 
-Khi cần tạo video, chỉ chạy:
+**Cách 1 (ưu tiên):** Dùng GoClaw built-in `create_video` tool
+```jsonc
+// create_video → MEDIA:<path> → send_file về Telegram
+{"prompt": "<topic>", "duration": 8, "aspect_ratio": "9:16"}
+```
 
+**Cách 2 (nâng cao — cần voiceover + ghép:** Qua `workstation_exec`:
 ```bash
 python3 scripts/video_auto_facebook.py
 ```
+> Script này tồn tại trong `tao-video-ai/scripts/`. Dùng khi cần voiceover hoặc pipeline đầy đủ.
+> Yêu cầu workstation đã bind + allowlist có `python3`, `ffmpeg`.
 
 Không chạy các lệnh cũ:
 

@@ -55,11 +55,22 @@ docker ps
 
 ### 3.2 Create Agents
 
+> **CRITICAL — tool profile:** Để skill tạo ảnh/video và **trả output về Telegram** được, mỗi agent phải có tool profile `full` (hoặc ít nhất đủ `group:media_gen` + `group:fs` + `group:messaging`).
+>
+> - `full` = có `create_image`/`create_video` (gen) **và** `message`/`send_file` (deliver).
+> - `coding` = có gen nhưng **không** deliver → triệu chứng "chạy xong không trả ảnh về Telegram".
+> - `messaging` = có deliver nhưng không gen.
+>
+> Tool `delegate` **đã bị gỡ bỏ** trong GoClaw hiện tại. Delegation giờ qua `team_tasks` + `spawn`.
+>
+> Xem chi tiết: [docs/SKILL_OUTPUT_FIX.md](docs/SKILL_OUTPUT_FIX.md)
+
 ```bash
 GATEWAY_TOKEN="<token from .env>"
 API="http://localhost:18790"
 
 # Create ga-trong-tre (Manager/Lead)
+# Profile: full (gen media + deliver + spawn worker + post Facebook)
 curl -X POST "$API/v1/agents" \
   -H "Authorization: Bearer $GATEWAY_TOKEN" \
   -H "Content-Type: application/json" \
@@ -69,10 +80,14 @@ curl -X POST "$API/v1/agents" \
     "agent_type": "predefined",
     "provider": "openai",
     "model": "gpt-4.1-mini",
-    "tools_config": {"delegate": {"enabled": true}, "team_tasks": {"enabled": true}}
+    "tools_config": {
+      "profile": "full",
+      "team_tasks": {"enabled": true},
+      "allow": ["create_image", "create_video", "send_file", "message", "workstation_exec"]
+    }
   }'
 
-# Create workers (repeat for viet-bai-fb, tao-anh, lam-video)
+# Worker: Cây Bút (text only — không cần media gen, nhưng cần deliver message)
 curl -X POST "$API/v1/agents" \
   -H "Authorization: Bearer $GATEWAY_TOKEN" \
   -H "Content-Type: application/json" \
@@ -82,9 +97,49 @@ curl -X POST "$API/v1/agents" \
     "agent_type": "predefined",
     "provider": "anthropic",
     "model": "claude-sonnet-5",
-    "tools_config": {"delegate": {"enabled": true}, "team_tasks": {"enabled": true}}
+    "tools_config": {
+      "profile": "full",
+      "team_tasks": {"enabled": true},
+      "allow": ["message", "send_file"]
+    }
+  }'
+
+# Worker: Tạo Ảnh (CẦN create_image + send_file để trả ảnh về Telegram)
+curl -X POST "$API/v1/agents" \
+  -H "Authorization: Bearer $GATEWAY_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "agent_key": "tao-anh",
+    "display_name": "Tạo Ảnh",
+    "agent_type": "predefined",
+    "provider": "openai",
+    "model": "gpt-4.1-mini",
+    "tools_config": {
+      "profile": "full",
+      "team_tasks": {"enabled": true},
+      "allow": ["create_image", "send_file", "message"]
+    }
+  }'
+
+# Worker: Làm Video (CẦN create_video + send_file + workstation_exec cho ffmpeg)
+curl -X POST "$API/v1/agents" \
+  -H "Authorization: Bearer $GATEWAY_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "agent_key": "lam-video",
+    "display_name": "Làm Video",
+    "agent_type": "predefined",
+    "provider": "openai",
+    "model": "gpt-4.1-mini",
+    "tools_config": {
+      "profile": "full",
+      "team_tasks": {"enabled": true},
+      "allow": ["create_video", "create_image", "send_file", "message", "workstation_exec"]
+    }
   }'
 ```
+
+> **Update agent đã tồn tại:** nếu agent đã tạo, dùng `PUT /v1/agents/{id}` với cùng `tools_config` để cập nhật profile. Xem `scripts/fix-agent-tools.sh`.
 
 ### 3.3 Create Team
 

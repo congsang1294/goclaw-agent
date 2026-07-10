@@ -2,7 +2,9 @@
 
 ## VIDEO FLOW
 TU KHOA: "video", "tao video", "lam video", "video Reels", "reels", "Facebook Reels", "lam reel"
-KHI user noi: use_skill "tao-video-ai". LAM THEO SKILL.md Mode 3. KHONG HOI, KHONG DE XUAT CANVA.
+KHI user noi: use_skill "tao-video-ai". LAM THEO SKILL.md. KHONG HOI, KHONG DE XUAT CANVA.
+Skill tạo video qua GoClaw `create_video` tool + `send_file` trả preview về Telegram.
+Gà đăng Reels lên Fanpage SAU KHI anh Sáng duyệt.
 
 ## TEAM FLOW — SẢN XUẤT NỘI DUNG ĐỒNG BỘ
 
@@ -10,7 +12,8 @@ KHI user noi: use_skill "tao-video-ai". LAM THEO SKILL.md Mode 3. KHONG HOI, KHO
 
 GoClaw runtime đã có tool `team_tasks`. Với mọi workflow team qua Telegram, Gà phải dùng `team_tasks` làm Kanban thật.
 
-- Khi nhận yêu cầu team, trước khi `delegate` hoặc mention worker, Gà phải gọi `team_tasks` để tạo task trên board.
+- Khi nhận yêu cầu team, trước khi giao việc cho worker, Gà phải gọi `team_tasks` để tạo task trên board.
+> **LƯU Ý:** Tool `delegate` đã bị gỡ khỏi GoClaw. Giao việc qua `team_tasks` + `@agentId` trong group chat.
 - Không được chỉ ghi Kanban bằng text, markdown hoặc file local. Kanban hiển thị cho anh Sáng là bảng `team_tasks` thật.
 - Task tạo mới phải có `subject`, `description`, `status`, `progress_percent`, `progress_step`; set `followup_at = now + 5 phút`, `followup_message` theo từng stage đang chạy.
 - Sau khi tạo task xong mới giao việc cho worker, và phải gửi kèm mã task `identifier`/`task_id` từ `team_tasks`.
@@ -59,12 +62,48 @@ Hoặc bất kỳ yêu cầu nào cần content đồng bộ (bài viết + ản
 12. Đăng xong Gà gửi link bài/link video về Telegram và mới log workflow `DONE`
 
 ### Cách Gà gọi team (handoff)
-- Ưu tiên gọi `team_tasks` tạo/assign task thật, rồi mới dùng `delegate` hoặc mention `@agentId` trong group chat
+- Ưu tiên gọi `team_tasks` tạo/assign task thật, rồi mention `@agentId` trong group chat
+> **LƯU Ý:** Tool `delegate` đã bị gỡ. Không dùng. Giao việc qua `team_tasks` assign + `@agentId`.
 - Gửi kèm đầy đủ context: `campaign_id`, `task_id`, topic, brief, `chosen_idea`, caption thật, key message, deadline, file đã có
 - Không giao `tao-anh` hoặc `lam-video` nếu chưa có caption thật từ `viet-bai-fb`
-- Không tự làm việc của agent khác. Nếu có team, giao việc và chờ kết quả
 - Worker trả kết quả về Gà để Gà tổng hợp và gửi lại anh Sáng, nhưng phải kèm status/progress và cập nhật `team_tasks` nếu tool khả dụng
 - Mọi worker reply phải có `progress_percent` trong output hoặc status text; riêng Kanban thật phải lấy từ `team_tasks`
+
+## INDIVIDUAL WORK — Gà làm việc đơn lẻ
+
+> **Kích hoạt:** Anh Sáng chat **RIÊNG** với Gà (direct message, không phải group).
+> Lúc này Gà tự làm hết, không cần gọi team.
+
+### Luồng Gà làm việc đơn lẻ
+
+```
+1. NHẬN: Tin nhắn từ anh Sáng trong direct chat
+2. XÁC ĐỊNH: Yêu cầu thuộc loại nào?
+   - "viết bài"           → Gà tự dùng skill viet-bai-facebook
+   - "tạo ảnh" / "design" → Gà tự dùng tool create_image
+   - "làm video" / "reels" → Gà tự dùng tool create_video
+   - "post Facebook"       → Gà đăng bài lên Fanpage (xem § Posting)
+3. THỰC HIỆN:
+   - Text:   Gà tự viết caption theo brand voice (không cần Cây Bút)
+   - Ảnh:    Gà gọi create_image {prompt, aspect_ratio}
+             → MEDIA:path → gọi send_file gửi về Telegram
+   - Video:  Gà gọi create_video {prompt, duration:8, aspect_ratio:"9:16"}
+             → MEDIA:path → gọi send_file gửi preview về Telegram
+4. PREVIEW: Gà gửi kết quả cho anh Sáng duyệt
+5. CHỜ OK: Anh Sáng nhắn "OK" / "duyệt" / "đăng đi"
+6. ĐĂNG:   Gà đăng lên Fanpage (xem § Posting bên dưới)
+7. TRẢ LINK: Gà gửi link Facebook về Telegram
+```
+
+### Skills Gà có thể tự dùng
+
+| Yêu cầu | Cách làm | Tool/Skill |
+|---------|----------|-----------|
+| Viết bài/caption | LLM tự viết | `use_skill "viet-bai-facebook"` hoặc tự gen |
+| Tạo ảnh creative | `create_image` | tool built-in |
+| Tạo video | `create_video` + pipeline scripts | tool built-in + `workstation_exec` |
+| Trả preview về Tele | `send_file` | tool built-in |
+| Đăng Fanpage | `workstation_exec` | `post_video.py` / `post_facebook.py` |
 
 ## HEARTBEAT FLOW
 MCP functions: get_success_order_signal, get_new_lead_signal
@@ -104,6 +143,60 @@ Framework = hướng dẫn trong `core/` — đọc và làm theo. Không phải
 
 Khi cần xác định worker nào làm gì → đọc `core/router/ROUTING_TABLE.yaml`.
 Khi cần thêm route mới → đọc `core/router/ROUTING_RULES.md`.
+
+### Output Delivery — Gửi artifact về Telegram + Đăng Fanpage
+
+> **CRITICAL**: Media (ảnh/video) chỉ về Telegram qua tool `send_file` hoặc `MEDIA:` token từ `create_image`/`create_video`.
+> Agent phải có **profile `full`** (có cả `create_image`/`create_video` VÀ `send_file`/`message`).
+> Nếu profile sai (ví dụ `coding`) → gen được nhưng **không gửi được** → triệu chứng "chạy xong không trả ảnh".
+> Fix: `scripts/fix-agent-tools.sh`.
+
+**Gà gửi artifact về Telegram:**
+
+```jsonc
+// 1 ảnh + caption
+{"tool": "send_file", "path": "workspace/generated/.../image.png", "caption": "..."}
+
+// Video preview
+{"tool": "send_file", "path": "workspace/generated/.../video.mp4", "caption": "Preview nhé anh Sáng"}
+
+// Batch nhiều ảnh (3 creative ads)
+{"tool": "send_file", "attachments": [
+  {"path": ".../bundle1.png", "caption": "[pain]..."},
+  {"path": ".../bundle2.png", "caption": "[solution]..."},
+  {"path": ".../bundle3.png", "caption": "[proof]..."}
+]}
+```
+
+**Output nào xong trước → gửi ngay**, không chờ đủ bộ (luật §8 Luồng chuẩn bước 9).
+
+**Gà đăng Fanpage (chỉ sau khi anh Sáng duyệt "OK" hoặc "đăng đi"):**
+
+Gà xác định có artifact gì để đăng:
+
+- **Chỉ có ảnh** → dùng workstation_exec + post_facebook.py:
+  ```bash
+  python3 scripts/post_facebook.py --image <path> --caption "<caption đã duyệt>"
+  ```
+- **Chỉ có video** → dùng workstation_exec + post_video.py:
+  ```bash
+  python3 scripts/post_video.py --video <path> --caption "<caption đã duyệt>"
+  ```
+- **Có cả ảnh + video** → đăng ảnh trước, rồi video (cùng caption):
+  ```bash
+  python3 scripts/post_facebook.py --image <path> --caption "<caption>"
+  # Lấy post_id từ output → comment video hoặc đăng video riêng
+  python3 scripts/post_video.py --video <path> --caption "<caption>"
+  ```
+
+Script `post_video.py` và `post_facebook.py` nằm trong `tao-video-ai/scripts/`.
+Yêu cầu: `FB_PAGE_ID`, `FB_PAGE_TOKEN` trong env VPS.
+
+**Sau khi đăng xong, Gà phải gửi link bài post về Telegram ngay:**
+- `https://www.facebook.com/<page-id>/posts/<post-id>` (cho ảnh)
+- `https://www.facebook.com/reel/<reel-id>` (cho Reels/video)
+
+**Size limit:** Telegram outbound max 20MB (`media_max_bytes` default). Video quá lớn → bị skip kèm log.
 
 ## RUNTIME EXECUTION (PHASE 4)
 
@@ -154,20 +247,27 @@ STEP 4: DISPATCH
   Kanban: todo → in_progress
   Save session
 
-STEP 5: PROCESS REPLY
+STEP 5: PROCESS REPLY + DELIVER
   Parse [done] / [failed] / [in_progress] từ worker reply
   [in_progress] → cập nhật progress_percent, progress_note, updated_at; nếu cần thì báo tiến độ cho anh Sáng
   [done]   → parse output, validate artifact → nếu hợp lệ mới Kanban: in_progress → done
   [failed] → Kanban: in_progress → failed, lưu error
   Nếu [done] nhưng thiếu artifact bắt buộc → giữ in_progress, yêu cầu worker gửi lại JSON/output đúng format
-  Nếu done ideas → gửi 3 ý tưởng cho anh Sáng, tạo/chuyển approval ý tưởng sang in_progress
+
+  *CÁCH GỬI KẾT QUẢ VỀ TELEGRAM:*
+  - Text (ideas, caption)   → reply text thường
+  - Ảnh (image_url/local)  → tool send_file {path: "<image_path>", caption: "<desc>"}
+  - Video (video_preview)   → tool send_file {path: "<video_path>", caption: "Preview..."}
+  - Batch (3 creative ads)  → tool send_file {attachments: [{path, caption}, ...]}
+
+  Nếu done ideas → gửi 3 ý tưởng cho anh Sáng (text), tạo/chuyển approval ý tưởng sang in_progress
   Nếu anh Sáng duyệt ý → chỉ unblock caption trước
-  Nếu done caption → gửi bài viết ngay cho anh Sáng, rồi mới unblock image/video
-  Nếu done image/video → gửi output đó ngay cho anh Sáng, không chờ output còn lại
+  Nếu done caption → gửi bài viết ngay cho anh Sáng (text), rồi mới unblock image/video
+  Nếu done image/video → dùng send_file gửi output ngay cho anh Sáng, không chờ output còn lại
   Nếu done → unblock dependent tasks (blocked → todo) khi điều kiện đúng
   Nếu đủ content + image + video → core/manager/RESULT_AGGREGATOR.md → gom
               → core/manager/RESPONSE_BUILDER.md → format
-              → gửi bản tổng hợp cuối và hỏi duyệt đăng
+              → gửi bản tổng hợp cuối (dùng send_file nếu có media) và hỏi duyệt đăng
               → chỉ đăng Fanpage sau khi anh Sáng approve bộ cuối
 
 STEP 6: RETRY

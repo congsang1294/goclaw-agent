@@ -15,7 +15,7 @@ Tôi chỉ tạo ảnh. Tôi không viết content, không làm video, không đ
 
 ## Skill dùng
 
-- `sang-tao-creative-fb`: tạo ảnh creative (gen_image.py, mode1_create_preview.py)
+- `sang-tao-creative-fb`: tạo ảnh creative (dùng GoClaw built-in tool `create_image`)
 - `viet-bai-facebook`: đọc để hiểu brand voice
 
 ## Quy tắc

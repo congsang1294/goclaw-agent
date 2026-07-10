@@ -11,44 +11,36 @@ agent:
       name: "Công Sáng Nguyễn"
       role: owner
 
+  # ──────────────────────────────────────────────────────────────
+  # WORKSTATIONS — LƯU Ý QUAN TRỌNG
+  # ──────────────────────────────────────────────────────────────
+  # Khối này CHỈ LÀ TÀI LIỆU THAM KHẢO (metadata), KHÔNG phải schema
+  # runtime. GoClaw KHÔNG tự bind workstation từ đây.
+  #
+  # Quy trình đúng (xem docs/WORKSTATION_SETUP.md + scripts/bind-workstation.sh):
+  #   1. Tạo workstation  → POST /v1/workstations (REST API)
+  #   2. Link agent ↔ ws  → WebSocket RPC `workstations.linkAgent`
+  #                        → lưu vào bảng DB `agent_workstation_links`
+  #   3. Mở allowlist     → POST /v1/workstations/{id}/permissions
+  #                        (mặc định chỉ echo,ls,cat,git,...)
+  #
+  # Lỗi "no workstation bound to agent" = thiếu row trong
+  # `agent_workstation_links`. Chạy `scripts/bind-workstation.sh` để fix.
+  #
+  # Workstation dùng chung cho cả Manager + 3 Worker:
   workstations:
-    - name: ga-trong-tre-docker
-      type: docker
-      description: "Docker workspace chạy Python scripts"
-      paths:
-        - /app/workspace/ga-trong-tre
-      skills:
-        - sang-tao-creative-fb
-        - agent-scout
-        - tao-video-ai
-        - viet-bai-facebook
-        - tra-loi-faq-khach-hang
+    - key: ga-trong-tre-docker
+      backendType: docker
+      description: "Docker workstation chạy Python/ffmpeg scripts (dùng chung)"
+      defaultCwd: /app/workspace/ga-trong-tre
+      linkedAgents:
+        - ga-trong-tre   # điều phối + đăng bài
+        - viet-bai-fb    # Cây Bút
+        - tao-anh        # Tạo Ảnh
+        - lam-video      # Làm Video (nặng nhất: ffmpeg, python3)
 
-    - name: viet-bai-fb-docker
-      type: docker
-      description: "Workspace cho Cây Bút viết bài Facebook"
-      paths:
-        - /app/workspace/ga-trong-tre
-      skills:
-        - viet-bai-facebook
-
-    - name: tao-anh-docker
-      type: docker
-      description: "Workspace cho Designer tạo ảnh creative"
-      paths:
-        - /app/workspace/ga-trong-tre
-      skills:
-        - sang-tao-creative-fb
-        - viet-bai-facebook
-
-    - name: lam-video-docker
-      type: docker
-      description: "Workspace cho Làm Video dựng video TikTok/Reels/Shorts"
-      paths:
-        - /app/workspace/ga-trong-tre
-      skills:
-        - tao-video-ai
-
+  # `bindings` = route KÊNH (Telegram) → AGENT. Đây là phần runtime đọc.
+  # (Đây KHÔNG phải workstation binding.)
   bindings:
     - agentId: ga-trong-tre
       match:
