@@ -17,11 +17,13 @@ Khi anh Sáng nhắn `video`, Gà phải tạo video AI và trả preview/file/l
 
 ```jsonc
 // create_video — tool built-in của GoClaw (provider chain: Gemini → MiniMax → OpenRouter)
+// CHỈ dùng 3 tham số này. KHÔNG thêm tham số nào khác.
 {
   "prompt": "<prompt sinh từ gen-prompt.py hoặc tự viết theo topic>",
   "duration": 8,            // 4 | 6 | 8 (giây)
   "aspect_ratio": "9:16"    // dọc cho Reels/TikTok/Shorts
 }
+// ⛔ KHÔNG dùng: response_format, n, size, style, quality, model
 // → trả về MEDIA:<path>, file lưu workspace/generated/{YYYY-MM-DD}/
 ```
 

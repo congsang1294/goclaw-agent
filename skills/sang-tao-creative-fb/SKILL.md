@@ -54,10 +54,17 @@ Luồng chuẩn:
 
 ```jsonc
 // create_image — built-in GoClaw tool (provider chain: OpenRouter → Gemini → OpenAI)
+// CHỈ dùng 2 tham số này. KHÔNG thêm tham số nào khác.
 {
   "prompt": "<prompt ảnh theo ý tưởng đã duyệt + brand style>",
   "aspect_ratio": "1:1"   // hoặc "4:3" cho post Facebook
 }
+// ⛔ KHÔNG dùng: response_format, n, size, style, quality — create_image không hỗ trợ
+```
+
+> **LƯU Ý QUAN TRỌNG:** `create_image` tool chỉ chấp nhận ĐÚNG 2 tham số: `prompt` (string) và `aspect_ratio` (1:1|3:4|4:3|9:16|16:9).
+> **KHÔNG thêm** `response_format`, `n`, `size`, `style`, `quality` hoặc bất kỳ tham số OpenAI API nào khác.
+> Nếu thêm tham số không hợp lệ → API trả lỗi "response_format invalid" → ảnh không tạo được.
 // → trả MEDIA:<path>, file lưu workspace/generated/{YYYY-MM-DD}/
 ```
 

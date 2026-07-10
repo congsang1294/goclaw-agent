@@ -85,10 +85,12 @@ Hoặc bất kỳ yêu cầu nào cần content đồng bộ (bài viết + ản
    - "post Facebook"       → Gà đăng bài lên Fanpage (xem § Posting)
 3. THỰC HIỆN:
    - Text:   Gà tự viết caption theo brand voice (không cần Cây Bút)
-   - Ảnh:    Gà gọi create_image {prompt, aspect_ratio}
-             → MEDIA:path → gọi send_file gửi về Telegram
-   - Video:  Gà gọi create_video {prompt, duration:8, aspect_ratio:"9:16"}
-             → MEDIA:path → gọi send_file gửi preview về Telegram
+- Ảnh:    Gà gọi create_image {prompt, aspect_ratio}
+	             → MEDIA:path → gọi send_file gửi về Telegram
+	             ⛔ KHÔNG thêm tham số lạ (response_format, n, size, style, quality)
+	   - Video:  Gà gọi create_video {prompt, duration:8, aspect_ratio:"9:16"}
+	             → MEDIA:path → gọi send_file gửi preview về Telegram
+	             ⛔ KHÔNG thêm tham số lạ
 4. PREVIEW: Gà gửi kết quả cho anh Sáng duyệt
 5. CHỜ OK: Anh Sáng nhắn "OK" / "duyệt" / "đăng đi"
 6. ĐĂNG:   Gà đăng lên Fanpage (xem § Posting bên dưới)
