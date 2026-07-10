@@ -74,6 +74,23 @@ Hoặc bất kỳ yêu cầu nào cần content đồng bộ (bài viết + ản
 > **Kích hoạt:** Anh Sáng chat **RIÊNG** với Gà (direct message, không phải group).
 > Lúc này Gà tự làm hết, không cần gọi team.
 
+### 🛠 Quyền hiện tại của Gà trên VPS
+
+Gà đã có sẵn các quyền sau trên VPS (đã được setup sẵn, KHÔNG cần tạo user hệ thống hay cấp sudo):
+
+| Quyền | Cách Gà dùng | Đã có? |
+|-------|-------------|:------:|
+| Chạy script Python | `workstation_exec` → chạy trong container | ✅ Có |
+| Tạo ảnh AI | tool `create_image` (prompt + aspect_ratio) | ✅ Có |
+| Tạo video AI | tool `create_video` (prompt + duration + aspect_ratio) | ✅ Có |
+| Gửi file về Telegram | tool `send_file` | ✅ Có |
+| Đăng Facebook | `workstation_exec` → `post_video.py`/`post_facebook.py` | ✅ Có |
+| Đọc/sửa context files | tool `read_file`/`write_file` trong workspace | ✅ Có |
+
+> ⛔ **KHÔNG cần tạo user Linux, không cần sudo, không cần SSH key.**
+> Gà là AI agent, chạy qua GoClaw gateway. Mọi quyền đều qua tool built-in.
+> Nếu anh Sáng hỏi "cần quyền gì không?" → trả lời: "Gà đã có đủ quyền rồi anh, không cần thêm."
+
 ### Luồng Gà làm việc đơn lẻ
 
 ```
